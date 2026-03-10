@@ -8,10 +8,10 @@ test.describe('TC-MAN-05: SMB Customer Sees ONLY Professional & Teams Products',
 
   test.beforeAll(async ({ request }) => {
     // Helper to create customer
-    const createCustomer = async (name, customer_type, email) => {
-      const res = await request.post(`${API_URL}/customers`, {
-        data: { name, customer_type, email }
-      });
+    const createCustomer = async (name, customer_type, email, company_name = null) => {
+      const data = { name, customer_type, email };
+      if (company_name) data.company_name = company_name;
+      const res = await request.post(`${API_URL}/customers`, { data });
       if (res.status() === 400) {
         const text = await res.text();
         if (text.includes("already registered")) {
@@ -38,7 +38,7 @@ test.describe('TC-MAN-05: SMB Customer Sees ONLY Professional & Teams Products',
       return await res.json();
     };
 
-    const customer = await createCustomer("Bob SMB TC05", "SMB", "bob.tc05@example.com");
+    const customer = await createCustomer("Bob SMB TC05", "SMB", "bob.tc05@example.com", "Bob SMB Corp");
     const basic = await createProduct("Basic TC05", "Basic", 9.99);
     const professional = await createProduct("Professional TC05", "Professional", 19.99);
     const teams = await createProduct("Teams TC05", "Teams", 29.99);
@@ -99,10 +99,9 @@ test.describe('TC-MAN-05: SMB Customer Sees ONLY Professional & Teams Products',
     // Step 8: Select a Teams product, set seats=1, submit the order successfully
     await productSelect.selectOption(String(teamsId));
     await orderPage.loc.orderSeatsInput(0).fill('1');
-    
-    // Submit
-    await orderPage.loc.submitBtn.click();
-    await expect(orderPage.loc.orderForm).toBeHidden();
+
+    // Advance Step 2 → Step 3 → Submit
+    await orderPage.submitOrder();
     
     // Order should appear in the orders table
     await orderPage.waitForVisible(orderPage.loc.orderListContainer);

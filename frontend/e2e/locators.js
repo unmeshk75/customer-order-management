@@ -124,7 +124,8 @@ export class OrderLocators {
   get prioritySelect()         { return this.page.getByTestId('order-priority-select'); }
   get discountInput()          { return this.page.getByTestId('order-discount-input'); }
   get notesInput()             { return this.page.getByTestId('order-notes-input'); }
-  get submitBtn()              { return this.page.getByTestId('submit-order-btn'); }
+  get nextBtn()                { return this.page.getByTestId('wizard-next'); }
+  get submitBtn()              { return this.page.getByTestId('wizard-submit'); }
   get cancelBtn()              { return this.page.getByTestId('cancel-order-btn'); }
   get productsSection()        { return this.page.locator('#order-products-section'); }
   get addProductBtn()          { return this.page.getByTestId('add-product-btn'); }

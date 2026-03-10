@@ -100,10 +100,9 @@ test.describe('TC-MAN-04: Consumer Customer Sees ONLY Basic & Professional Produ
     // Step 8: Select a Basic product, set seats=2, submit the order successfully
     await productSelect.selectOption(String(basicId));
     await orderPage.loc.orderSeatsInput(0).fill('2');
-    
-    // Submit
-    await orderPage.loc.submitBtn.click();
-    await expect(orderPage.loc.orderForm).toBeHidden();
+
+    // Advance Step 2 → Step 3 → Submit
+    await orderPage.submitOrder();
     
     // Order should appear in the orders table
     await orderPage.waitForVisible(orderPage.loc.orderListContainer);

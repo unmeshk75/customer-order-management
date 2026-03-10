@@ -56,12 +56,12 @@ test.describe('TC-MAN-03: Selecting a Customer Dynamically Loads the Products Se
     // Step 1: Open Create Order form
     await orderPage.openCreateForm();
 
-    // order-products-section must be ABSENT from DOM (not just hidden)
-    await expect(orderPage.loc.productsSection).not.toBeAttached();
+    // order-products-section exists in DOM but must not be visible before customer is selected
+    await expect(orderPage.loc.productsSection).not.toBeVisible();
 
-    // Step 2: Submit button must be DISABLED before customer is selected
-    const submitBtn = orderPage.loc.submitBtn;
-    await expect(submitBtn).toBeDisabled();
+    // Step 2: Next button must be DISABLED before customer is selected
+    const nextBtn = orderPage.loc.nextBtn;
+    await expect(nextBtn).toBeDisabled();
 
     // Step 3: Customer dropdown lists all customers in 'Name (Type)' format
     const customerSelect = orderPage.loc.customerSelect;
@@ -70,13 +70,18 @@ test.describe('TC-MAN-03: Selecting a Customer Dynamically Loads the Products Se
     const hasConsumer = options.some(opt => opt.includes('Consumer'));
     expect(hasConsumer).toBeTruthy();
 
-    // Step 4: Select the Consumer customer
-    await orderPage.selectCustomer(customerLabel);
+    // Step 4: Select the Consumer customer (inline to capture intermediate state)
+    await customerSelect.selectOption({ label: customerLabel });
     await expect(customerSelect).toHaveValue(String(customer.id));
 
-    // Step 5: order-products-section is now rendered in the DOM
+    // Step 5: Next button is now ENABLED (customer selected — key assertion of this test)
+    await expect(nextBtn).toBeEnabled();
+
+    // Advance to Step 2 (Products)
+    await nextBtn.click();
+
+    // Step 5 cont: products section is now visible
     const productsSection = orderPage.loc.productsSection;
-    await expect(productsSection).toBeAttached();
     await expect(productsSection).toBeVisible();
 
     // Product row 0 with select + seats input + 'Add Another Product' button
@@ -90,8 +95,5 @@ test.describe('TC-MAN-03: Selecting a Customer Dynamically Loads the Products Se
     const bannerText = await infoText.textContent();
     expect(bannerText).toContain('Basic');
     expect(bannerText).toContain('Professional');
-
-    // Step 7: Submit button is now ENABLED
-    await expect(submitBtn).toBeEnabled();
   });
 });

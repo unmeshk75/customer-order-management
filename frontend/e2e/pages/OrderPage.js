@@ -21,14 +21,25 @@ export class OrderPage extends BasePage {
   async openCreateForm() {
     await this.waitForEnabled(this.loc.createOrderBtn);
     await this.loc.createOrderBtn.click();
-    await this.waitForVisible(this.loc.orderForm);
+    await this.waitForVisible(this.loc.orderWizard);
   }
 
   async selectCustomer(customerLabel) {
     await this.loc.customerSelect.selectOption({ label: customerLabel });
-    // Dynamic wait: Products section appears
-    await this.waitForAttached(this.loc.productsSection);
+    // Customer selection enables Next; click it to advance to Step 2 (Products)
+    await this.waitForEnabled(this.loc.nextBtn);
+    await this.loc.nextBtn.click();
     await this.waitForVisible(this.loc.productsSection);
+  }
+
+  async submitOrder() {
+    // Step 2 → Step 3 (Review)
+    await this.waitForEnabled(this.loc.nextBtn);
+    await this.loc.nextBtn.click();
+    // Step 3 → Submit
+    await this.waitForVisible(this.loc.submitBtn);
+    await this.loc.submitBtn.click();
+    await this.waitForHidden(this.loc.orderWizard);
   }
 
 }
