@@ -17,17 +17,28 @@ class Customer(Base):
     state = Column(String(2))  # Optional, only for US addresses
     zip_code = Column(String(20))
     country = Column(String(100))
+    company_name = Column(String(200))
+    account_status = Column(String(20), nullable=False, default='Active')
+    contact_preference = Column(String(20), nullable=False, default='Email')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
     orders = relationship("Order", back_populates="customer", cascade="all, delete-orphan")
 
-    # Check constraint for customer_type
+    # Check constraints
     __table_args__ = (
         CheckConstraint(
             customer_type.in_(['Consumer', 'SMB', 'Enterprise']),
             name='check_customer_type'
+        ),
+        CheckConstraint(
+            account_status.in_(['Active', 'Inactive', 'Suspended']),
+            name='check_account_status'
+        ),
+        CheckConstraint(
+            contact_preference.in_(['Email', 'Phone', 'Both']),
+            name='check_contact_preference'
         ),
     )
 
@@ -41,18 +52,20 @@ class Product(Base):
     product_type = Column(String(30), nullable=False)
     description = Column(String(500))
     price_per_seat = Column(Float, nullable=False)
+    stock_quantity = Column(Integer, nullable=False, default=100)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
     order_products = relationship("OrderProduct", back_populates="product")
 
-    # Check constraint for product_type
+    # Check constraints
     __table_args__ = (
         CheckConstraint(
             product_type.in_(['Basic', 'Professional', 'Teams', 'Ultra-Enterprise']),
             name='check_product_type'
         ),
+        CheckConstraint(stock_quantity >= 0, name='check_stock_non_negative'),
     )
 
 
@@ -66,6 +79,8 @@ class Order(Base):
     status = Column(String(20), default="Active")
     total_amount = Column(Float)
     notes = Column(String(500))
+    priority = Column(String(20), nullable=False, default='Medium')
+    discount_percentage = Column(Float, nullable=False, default=0.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -73,11 +88,19 @@ class Order(Base):
     customer = relationship("Customer", back_populates="orders")
     order_products = relationship("OrderProduct", back_populates="order", cascade="all, delete-orphan")
 
-    # Check constraint for status
+    # Check constraints
     __table_args__ = (
         CheckConstraint(
             status.in_(['Active', 'Cancelled', 'Completed']),
             name='check_order_status'
+        ),
+        CheckConstraint(
+            priority.in_(['Low', 'Medium', 'High', 'Critical']),
+            name='check_order_priority'
+        ),
+        CheckConstraint(
+            (discount_percentage >= 0) & (discount_percentage <= 100),
+            name='check_discount_range'
         ),
     )
 
@@ -96,13 +119,6 @@ class OrderProduct(Base):
     # Relationships
     order = relationship("Order", back_populates="order_products")
     product = relationship("Product", back_populates="order_products")
-
-    # Check constraints
-    __table_args__ = (
-        CheckConstraint(seats > 0, name='check_seats_positive'),
-        # Unique constraint to prevent duplicate products in same order
-        # This is handled by unique index below
-    )
 
     # Create unique index on (order_id, product_id)
     from sqlalchemy import Index

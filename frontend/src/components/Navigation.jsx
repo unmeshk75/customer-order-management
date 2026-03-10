@@ -6,6 +6,14 @@ const Navigation = ({ currentView, setCurrentView }) => {
       <h1>Customer Order Management</h1>
       <div className="nav-buttons">
         <button
+          id="nav-dashboard"
+          className={currentView === 'dashboard' ? 'active' : ''}
+          onClick={() => setCurrentView('dashboard')}
+          data-testid="nav-dashboard"
+        >
+          Dashboard
+        </button>
+        <button
           id="nav-customers"
           className={currentView === 'customers' ? 'active' : ''}
           onClick={() => setCurrentView('customers')}

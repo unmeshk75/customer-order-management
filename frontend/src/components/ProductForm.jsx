@@ -9,6 +9,7 @@ const ProductForm = ({ product, onClose }) => {
     product_type: '',
     description: '',
     price_per_seat: '',
+    stock_quantity: 100,
   });
 
   const [error, setError] = useState('');
@@ -21,6 +22,7 @@ const ProductForm = ({ product, onClose }) => {
         product_type: product.product_type || '',
         description: product.description || '',
         price_per_seat: product.price_per_seat || '',
+        stock_quantity: product.stock_quantity ?? 100,
       });
     }
   }, [product]);
@@ -43,9 +45,17 @@ const ProductForm = ({ product, onClose }) => {
       return;
     }
 
+    const stock = parseInt(formData.stock_quantity);
+    if (isNaN(stock) || stock < 0) {
+      setError('Stock quantity must be a non-negative number');
+      setLoading(false);
+      return;
+    }
+
     const data = {
       ...formData,
       price_per_seat: price,
+      stock_quantity: stock,
     };
 
     try {
@@ -124,6 +134,20 @@ const ProductForm = ({ product, onClose }) => {
             onChange={handleChange}
             required
             data-testid="product-price-input"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="product-stock">Stock Quantity *</label>
+          <input
+            id="product-stock"
+            name="stock_quantity"
+            type="number"
+            min="0"
+            value={formData.stock_quantity}
+            onChange={handleChange}
+            required
+            data-testid="product-stock-input"
           />
         </div>
 

@@ -5,6 +5,7 @@ FastAPI application for Customer/Product/Order management.
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import func as sqlfunc
 from typing import List
 import uvicorn
 
@@ -32,6 +33,42 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def build_order_response(db_order, db: Session) -> schemas.OrderResponse:
+    """Build a full OrderResponse from a db Order object."""
+    products = []
+    for op in db_order.order_products:
+        products.append(schemas.OrderProductResponse(
+            id=op.id,
+            product_id=op.product_id,
+            product_name=op.product.name,
+            product_type=op.product.product_type,
+            seats=op.seats,
+            unit_price=op.unit_price,
+            subtotal=op.subtotal
+        ))
+
+    discount_pct = db_order.discount_percentage if db_order.discount_percentage is not None else 0.0
+    total = db_order.total_amount if db_order.total_amount is not None else 0.0
+    discounted_total = total * (1 - discount_pct / 100)
+
+    return schemas.OrderResponse(
+        id=db_order.id,
+        customer_id=db_order.customer_id,
+        customer_name=db_order.customer.name,
+        customer_type=db_order.customer.customer_type,
+        order_date=db_order.order_date,
+        status=db_order.status,
+        total_amount=total,
+        discounted_total=discounted_total,
+        notes=db_order.notes,
+        priority=db_order.priority if db_order.priority else 'Medium',
+        discount_percentage=discount_pct,
+        products=products,
+        created_at=db_order.created_at,
+        updated_at=db_order.updated_at
+    )
 
 
 # ==================== Customer Endpoints ====================
@@ -154,40 +191,7 @@ async def delete_product(product_id: int, db: Session = Depends(get_db)):
 async def list_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Get all orders with customer and product details"""
     db_orders = crud.get_orders(db, skip=skip, limit=limit)
-
-    # Convert to response format with nested details
-    orders = []
-    for db_order in db_orders:
-        # Build product list with details
-        products = []
-        for op in db_order.order_products:
-            products.append(schemas.OrderProductResponse(
-                id=op.id,
-                product_id=op.product_id,
-                product_name=op.product.name,
-                product_type=op.product.product_type,
-                seats=op.seats,
-                unit_price=op.unit_price,
-                subtotal=op.subtotal
-            ))
-
-        # Build order response
-        order_response = schemas.OrderResponse(
-            id=db_order.id,
-            customer_id=db_order.customer_id,
-            customer_name=db_order.customer.name,
-            customer_type=db_order.customer.customer_type,
-            order_date=db_order.order_date,
-            status=db_order.status,
-            total_amount=db_order.total_amount,
-            notes=db_order.notes,
-            products=products,
-            created_at=db_order.created_at,
-            updated_at=db_order.updated_at
-        )
-        orders.append(order_response)
-
-    return orders
+    return [build_order_response(o, db) for o in db_orders]
 
 
 @app.get("/api/orders/{order_id}", response_model=schemas.OrderResponse)
@@ -196,43 +200,14 @@ async def get_order(order_id: int, db: Session = Depends(get_db)):
     db_order = crud.get_order_by_id(db, order_id)
     if not db_order:
         raise HTTPException(status_code=404, detail="Order not found")
-
-    # Build product list with details
-    products = []
-    for op in db_order.order_products:
-        products.append(schemas.OrderProductResponse(
-            id=op.id,
-            product_id=op.product_id,
-            product_name=op.product.name,
-            product_type=op.product.product_type,
-            seats=op.seats,
-            unit_price=op.unit_price,
-            subtotal=op.subtotal
-        ))
-
-    # Build order response
-    order_response = schemas.OrderResponse(
-        id=db_order.id,
-        customer_id=db_order.customer_id,
-        customer_name=db_order.customer.name,
-        customer_type=db_order.customer.customer_type,
-        order_date=db_order.order_date,
-        status=db_order.status,
-        total_amount=db_order.total_amount,
-        notes=db_order.notes,
-        products=products,
-        created_at=db_order.created_at,
-        updated_at=db_order.updated_at
-    )
-
-    return order_response
+    return build_order_response(db_order, db)
 
 
 @app.post("/api/orders", response_model=schemas.OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     """
     Create a new order with business rule validation.
-    Validates that products are allowed for the customer type.
+    Validates that products are allowed for the customer type and stock is sufficient.
     """
     # 1. Check customer exists
     customer = crud.get_customer_by_id(db, order.customer_id)
@@ -268,7 +243,7 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
             detail="Cannot add the same product multiple times to an order"
         )
 
-    # 5. Create order with transaction
+    # 5. Create order with transaction (stock check happens inside crud.create_order)
     try:
         db_order = crud.create_order(db, order)
     except Exception as e:
@@ -284,7 +259,7 @@ async def update_order(
     order: schemas.OrderUpdate,
     db: Session = Depends(get_db)
 ):
-    """Update an existing order (status and notes only)"""
+    """Update an existing order (status, notes, priority, discount)"""
     existing = crud.get_order_by_id(db, order_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -295,7 +270,7 @@ async def update_order(
 
 @app.delete("/api/orders/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_order(order_id: int, db: Session = Depends(get_db)):
-    """Delete an order (cascade deletes order_products)"""
+    """Delete an order (cascade deletes order_products, restores stock)"""
     success = crud.delete_order(db, order_id)
     if not success:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -311,6 +286,50 @@ async def get_available_products(customer_type: str):
     if not available:
         raise HTTPException(status_code=400, detail=f"Invalid customer type: {customer_type}")
     return available
+
+
+@app.get("/api/dashboard", response_model=schemas.DashboardResponse)
+async def get_dashboard(db: Session = Depends(get_db)):
+    """Get dashboard summary: customer counts, order counts, revenue, low stock alerts"""
+    # Customer counts by type
+    customer_counts = db.query(
+        models.Customer.customer_type,
+        sqlfunc.count(models.Customer.id)
+    ).group_by(models.Customer.customer_type).all()
+    customers_by_type = {ct: count for ct, count in customer_counts}
+
+    # Order counts by status
+    order_counts = db.query(
+        models.Order.status,
+        sqlfunc.count(models.Order.id)
+    ).group_by(models.Order.status).all()
+    orders_by_status = {s: count for s, count in order_counts}
+
+    # Total revenue (Active + Completed orders only)
+    revenue_result = db.query(
+        sqlfunc.sum(models.Order.total_amount)
+    ).filter(models.Order.status.in_(['Active', 'Completed'])).scalar()
+    total_revenue = float(revenue_result or 0.0)
+
+    # Low stock products (stock < 10)
+    low_stock = db.query(models.Product).filter(
+        models.Product.stock_quantity < 10
+    ).all()
+    low_stock_products = [
+        schemas.LowStockProduct(
+            id=p.id,
+            name=p.name,
+            product_type=p.product_type,
+            stock_quantity=p.stock_quantity
+        ) for p in low_stock
+    ]
+
+    return schemas.DashboardResponse(
+        customers_by_type=customers_by_type,
+        orders_by_status=orders_by_status,
+        total_revenue=total_revenue,
+        low_stock_products=low_stock_products
+    )
 
 
 @app.get("/api/health", response_model=schemas.HealthResponse)

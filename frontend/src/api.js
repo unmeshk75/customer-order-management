@@ -38,6 +38,11 @@ export const orderAPI = {
   delete: (id) => api.delete(`/orders/${id}`),
 };
 
+// Dashboard API
+export const dashboardAPI = {
+  get: () => api.get('/dashboard'),
+};
+
 // Health check
 export const healthCheck = () => api.get('/health');
 

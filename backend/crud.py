@@ -122,12 +122,14 @@ def get_order_by_id(db: Session, order_id: int) -> Optional[models.Order]:
 def create_order(db: Session, order: schemas.OrderCreate) -> models.Order:
     """
     Create a new order with products.
-    Uses transaction to ensure atomicity.
+    Validates and decrements stock. Uses transaction to ensure atomicity.
     """
     # Create order
     db_order = models.Order(
         customer_id=order.customer_id,
         notes=order.notes,
+        priority=order.priority,
+        discount_percentage=order.discount_percentage,
         status="Active"
     )
     db.add(db_order)
@@ -136,11 +138,22 @@ def create_order(db: Session, order: schemas.OrderCreate) -> models.Order:
     # Create order products and calculate total
     total_amount = 0.0
     for item in order.products:
-        # Get product to get current price
+        # Get product to get current price and check stock
         product = get_product_by_id(db, item.product_id)
         if not product:
             db.rollback()
             raise ValueError(f"Product with id {item.product_id} not found")
+
+        # Validate stock
+        if product.stock_quantity < item.seats:
+            db.rollback()
+            raise ValueError(
+                f"Insufficient stock for '{product.name}': "
+                f"{product.stock_quantity} available, {item.seats} requested"
+            )
+
+        # Decrement stock
+        product.stock_quantity -= item.seats
 
         # Calculate subtotal
         subtotal = product.price_per_seat * item.seats
@@ -166,22 +179,31 @@ def create_order(db: Session, order: schemas.OrderCreate) -> models.Order:
 
 
 def update_order(db: Session, order_id: int, order: schemas.OrderUpdate) -> Optional[models.Order]:
-    """Update an existing order (status and notes only)"""
+    """Update an existing order (status, notes, priority, discount)"""
     db_order = get_order_by_id(db, order_id)
     if db_order:
         if order.status is not None:
             db_order.status = order.status
         if order.notes is not None:
             db_order.notes = order.notes
+        if order.priority is not None:
+            db_order.priority = order.priority
+        if order.discount_percentage is not None:
+            db_order.discount_percentage = order.discount_percentage
         db.commit()
         db.refresh(db_order)
     return db_order
 
 
 def delete_order(db: Session, order_id: int) -> bool:
-    """Delete an order (cascade deletes order_products)"""
+    """Delete an order and restore stock for all associated products"""
     db_order = get_order_by_id(db, order_id)
     if db_order:
+        # Restore stock for each product in the order
+        for op in db_order.order_products:
+            product = get_product_by_id(db, op.product_id)
+            if product:
+                product.stock_quantity += op.seats
         db.delete(db_order)
         db.commit()
         return True
