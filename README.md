@@ -31,7 +31,7 @@ customer_order_management/
 
 ```bash
 # From project root
-python -m venv venv            # already exists — skip if present
+python -m venv venv            # skip if present
 venv/Scripts/activate          # Windows
 # source venv/bin/activate     # Mac/Linux
 
@@ -70,6 +70,8 @@ npm test                        # headless
 npm run test:headed             # with browser visible
 npm run test:ui                 # Playwright UI mode
 ```
+
+Refer to [automation](automation) for further docs on testing.
 
 ## Business Rules
 

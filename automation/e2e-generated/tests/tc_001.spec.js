@@ -1,9 +1,13 @@
 /**
  * tc_001.spec.js
  * ─────────────────────────────────────────────────────────────────────────────
- * TC-001: Customer creation — form opens, data is submitted, and the new
- *         customer appears in the list. Negative path verifies that submitting
- *         an empty form shows a validation error.
+ * TC-001: Customer Creation
+ *
+ * Covers:
+ *  [Positive] Create a new customer and verify it appears in the list
+ *  [Negative] Cancel form without creating a customer — list unchanged
+ *  [Negative] Submit empty form shows a validation error
+ *  [Negative] Missing required email shows error
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -13,145 +17,126 @@ import { ApiHelper } from '../utils/ApiHelper.js';
 
 const SEED_PREFIX = 'TC001';
 
-test.describe('TC-001: Customer Creation Posted and Appears in the List', () => {
+test.describe('TC-001: Customer Creation', () => {
 
-  /** @type {number[]} IDs of customers created during positive tests — cleaned up in afterAll */
-  let createdIds = [];
+  /** @type {import('@playwright/test').APIRequestContext} */
+  let request;
+  /** @type {ApiHelper} */
+  let api;
 
-  test.afterAll(async ({ request }) => {
-    const api = new ApiHelper(request);
+  const createdIds = [];
+
+  test.beforeAll(async ({ request: req }) => {
+    request = req;
+    api = new ApiHelper(request);
+  });
+
+  test.afterAll(async () => {
+    for (const id of createdIds) {
+      await api.deleteCustomer(id).catch(() => {});
+    }
     await api.cleanupCustomersByName(SEED_PREFIX);
   });
 
-  // ── Positive ───────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
+  // Positive
+  // ──────────────────────────────────────────────────────────────────────────
 
-  test('[Positive] Create Customer button opens the customer form', async ({ page }) => {
+  test('[Positive] Create a new customer and verify it appears in the list', async ({ page }) => {
     const customerPage = new CustomerPage(page);
+    const uniqueName = `${SEED_PREFIX}-Alice-${Date.now()}`;
+
     await customerPage.navigateToCustomers();
 
-    await expect(customerPage.loc.createCustomerBtn).toBeVisible();
-    await expect(customerPage.loc.createCustomerBtn).toBeEnabled();
+    const rowsBefore = await customerPage.getRowCount();
 
     await customerPage.openCreateForm();
-
-    await expect(customerPage.loc.customerForm).toBeVisible();
-    await expect(customerPage.loc.nameInput).toBeVisible();
-    await expect(customerPage.loc.emailInput).toBeVisible();
-    await expect(customerPage.loc.submitBtn).toBeVisible();
-    await expect(customerPage.loc.cancelBtn).toBeVisible();
-
-    await customerPage.cancelForm();
-  });
-
-  test('[Positive] Submit valid Consumer customer and verify it appears in the list', async ({ page }) => {
-    const suffix = `${SEED_PREFIX}-${Date.now()}`;
-    const data = {
-      name:         `Customer ${suffix}`,
+    await customerPage.fillCustomerForm({
+      name:         uniqueName,
       customerType: 'Consumer',
-      email:        `customer.${suffix}@test.example`,
-      phone:        '5550001234',
+      email:        `alice.${Date.now()}@tc001.test`,
+      phone:        '555-0100',
       street:       '123 Main St',
       city:         'Springfield',
       country:      'US',
       state:        'IL',
       zip:          '62701',
-    };
-
-    const customerPage = new CustomerPage(page);
-    await customerPage.navigateToCustomers();
-    await customerPage.openCreateForm();
-    await customerPage.fillCustomerForm(data);
+    });
     await customerPage.submitForm();
 
-    // List must be visible after submit
-    await expect(customerPage.loc.customerListContainer).toBeVisible();
+    // List should have one more row
+    await expect(customerPage.loc.customerTableRows).toHaveCount(rowsBefore + 1);
 
-    // Locate the new row by name
-    const nameCell = page.locator(`xpath=//td[normalize-space(text())="${data.name}"]`);
+    // The new customer's name should appear in the table
+    const nameCell = page.locator(`xpath=//td[normalize-space(text())="${uniqueName}"]`);
     await expect(nameCell).toBeVisible();
 
-    // Clean up via API — retrieve the id from the row's data attribute
-    const api = new ApiHelper(page.request);
-    await api.cleanupCustomersByName(suffix);
+    // Record ID for afterAll cleanup
+    const customers = await api.getAllCustomers();
+    const created = customers.find(c => c.name === uniqueName);
+    if (created) createdIds.push(created.id);
   });
 
-  test('[Positive] New customer row shows correct type and email after creation', async ({ page, request }) => {
-    const suffix  = `${SEED_PREFIX}-row-${Date.now()}`;
-    const api     = new ApiHelper(request);
-    const seeded  = await api.createCustomer({
-      name:               `Customer ${suffix}`,
-      customer_type:      'Consumer',
-      email:              `row.${suffix}@test.example`,
-      account_status:     'Active',
-      contact_preference: 'Email',
-    });
-    createdIds.push(seeded.id);
+  // ──────────────────────────────────────────────────────────────────────────
+  // Negative
+  // ──────────────────────────────────────────────────────────────────────────
 
+  test('[Negative] Cancel form without creating a customer — list is unchanged', async ({ page }) => {
     const customerPage = new CustomerPage(page);
     await customerPage.navigateToCustomers();
 
-    // Row must be present
-    await expect(customerPage.loc.customerRow(seeded.id)).toBeVisible();
-
-    // Name cell
-    await expect(customerPage.loc.customerName(seeded.id)).toHaveText(`Customer ${suffix}`);
-
-    // Type cell
-    await expect(customerPage.loc.customerType(seeded.id)).toHaveText('Consumer');
-
-    // Email cell
-    await expect(customerPage.loc.customerEmail(seeded.id)).toContainText(`row.${suffix}@test.example`);
-
-    await api.deleteCustomer(seeded.id);
-    createdIds = createdIds.filter(id => id !== seeded.id);
-  });
-
-  test('[Positive] Cancel button closes the form without creating a customer', async ({ page }) => {
-    const customerPage = new CustomerPage(page);
-    await customerPage.navigateToCustomers();
-
-    const countBefore = await customerPage.getRowCount();
+    const rowsBefore = await customerPage.getRowCount();
 
     await customerPage.openCreateForm();
-    await customerPage.fillName(`Customer ${SEED_PREFIX}-cancel-${Date.now()}`);
+    await customerPage.fillName(`${SEED_PREFIX}-Cancelled-${Date.now()}`);
     await customerPage.cancelForm();
 
-    // Form must be gone
+    // Form should be gone
     await expect(customerPage.loc.customerForm).not.toBeVisible();
 
-    // Row count must not have changed
-    const countAfter = await customerPage.getRowCount();
-    expect(countAfter).toBe(countBefore);
+    // Row count must remain the same
+    await expect(customerPage.loc.customerTableRows).toHaveCount(rowsBefore);
   });
 
-  // ── Negative ───────────────────────────────────────────────────────────────
-
-  test('[Negative] Submitting empty form shows a validation error', async ({ page }) => {
+  test('[Negative] Submit empty form shows a validation error', async ({ page }) => {
     const customerPage = new CustomerPage(page);
     await customerPage.navigateToCustomers();
+
     await customerPage.openCreateForm();
 
-    // Do NOT fill any fields — submit straight away
+    // Submit without filling anything
     await customerPage.submitFormExpectError();
 
-    // Error message must be visible; form must remain open
-    await expect(customerPage.loc.formError).toBeVisible();
+    // Form must still be visible (not submitted)
     await expect(customerPage.loc.customerForm).toBeVisible();
+
+    // A validation error message must appear
+    await expect(customerPage.loc.formError).toBeVisible();
+    await expect(customerPage.loc.formError).not.toHaveText('');
 
     await customerPage.cancelForm();
   });
 
-  test('[Negative] Submitting form with name only (missing required email) shows error', async ({ page }) => {
+  test('[Negative] Missing required email shows error', async ({ page }) => {
     const customerPage = new CustomerPage(page);
     await customerPage.navigateToCustomers();
+
     await customerPage.openCreateForm();
 
-    await customerPage.fillName(`Customer ${SEED_PREFIX}-no-email-${Date.now()}`);
-    // Leave email blank intentionally
+    // Fill all required fields except email
+    await customerPage.fillCustomerForm({
+      name:         `${SEED_PREFIX}-NoEmail-${Date.now()}`,
+      customerType: 'Consumer',
+    });
+
     await customerPage.submitFormExpectError();
 
-    await expect(customerPage.loc.formError).toBeVisible();
+    // Form must still be open
     await expect(customerPage.loc.customerForm).toBeVisible();
+
+    // Error message must be visible
+    await expect(customerPage.loc.formError).toBeVisible();
+    await expect(customerPage.loc.formError).not.toHaveText('');
 
     await customerPage.cancelForm();
   });

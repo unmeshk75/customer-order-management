@@ -4,7 +4,7 @@ A CLI tool that uses Claude (via the Anthropic API or Claude Code CLI) to genera
 
 ## How It Works
 
-```
+```txt
 JSX components
      │
      ▼
@@ -35,6 +35,7 @@ cp .env.example .env
 ### Option B — Claude Code CLI (no API key needed)
 
 Uses your Claude Code subscription. Requires `claude` on PATH:
+
 ```bash
 npm install -g @anthropic-ai/claude-code
 claude --version   # verify
@@ -43,6 +44,7 @@ claude --version   # verify
 Then pass `--sdk` to any command below.
 
 **Activate the shared Python venv first:**
+
 ```bash
 # From project root
 venv/Scripts/activate        # Windows
@@ -97,7 +99,7 @@ python main.py tests --input cases.xlsx --output ../e2e-generated/tests
 ### Flags summary
 
 | Flag | Applies to | Description |
-|---|---|---|
+| --- | --- | --- |
 | `--sdk` | both | Use `claude` CLI instead of Anthropic API |
 | `--only locators\|pages` | `e2e` | Generate only one layer |
 | `--output PATH` | both | Override output directory |
@@ -107,7 +109,7 @@ python main.py tests --input cases.xlsx --output ../e2e-generated/tests
 ## File Overview
 
 | File | Purpose |
-|---|---|
+| --- | --- |
 | `main.py` | CLI entry point, wires subcommands together |
 | `extractor.py` | Parses JSX files, extracts `data-testid` and `id` values into `selector_manifest.json` |
 | `selector_manifest.json` | Ground truth of all selectors in the app; re-run extractor after UI changes |
@@ -122,7 +124,7 @@ python main.py tests --input cases.xlsx --output ../e2e-generated/tests
 
 The `e2e-sample/` directory contains hand-crafted reference implementations used as few-shot examples in every prompt. The generator reads these at runtime — do not delete them.
 
-```
+```txt
 e2e-sample/
 ├── locators/    # Reference locator files (one per entity)
 ├── pages/       # Reference page objects

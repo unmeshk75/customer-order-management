@@ -4,7 +4,6 @@ const CHROME_PATH = process.env.CHROME_PATH || 'C:\\Program Files (x86)\\Google\
 
 module.exports = defineConfig({
   testDir: '.',
-  testMatch: '**/*.spec.js',
   timeout: 30 * 1000,
   expect: {
     timeout: 5000
