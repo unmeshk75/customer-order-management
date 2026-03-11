@@ -13,7 +13,7 @@ import json
 import os
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_E2E  = os.path.normpath(os.path.join(_HERE, '..', 'e2e'))
+_E2E  = os.path.normpath(os.path.join(_HERE, 'e2e-sample'))
 
 # ── shared constraint block ────────────────────────────────────────────────
 _WAIT_CONSTRAINTS = """

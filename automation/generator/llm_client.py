@@ -34,13 +34,13 @@ load_dotenv(dotenv_path=Path(__file__).parent / '.env')
 MODEL      = 'claude-sonnet-4-6'
 MAX_TOKENS = 8192
 
-# Regex to strip outermost markdown fences
-_FENCE_RE = re.compile(r'^```[a-zA-Z]*\s*\n?(.*?)\n?```\s*$', re.DOTALL)
+# Regex to find the first (and likely only) code block in the response
+_FENCE_RE = re.compile(r'```[a-zA-Z]*\s*\n(.*?)\n```', re.DOTALL)
 
 
 def _strip_fences(text: str) -> str:
-    """Remove surrounding markdown code fences if present."""
-    m = _FENCE_RE.match(text.strip())
+    """Extract code from the first markdown code fence block; strip all surrounding text."""
+    m = _FENCE_RE.search(text.strip())
     return m.group(1).strip() if m else text.strip()
 
 

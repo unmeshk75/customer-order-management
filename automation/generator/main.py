@@ -43,7 +43,7 @@ import writer
 from llm_client import create_client, LLMClient, SDKClient
 
 _HERE   = os.path.dirname(os.path.abspath(__file__))
-_E2E_REF = os.path.normpath(os.path.join(_HERE, '..', 'e2e'))
+_E2E_REF = os.path.normpath(os.path.join(_HERE, 'e2e-sample'))
 
 # ── entity configuration ──────────────────────────────────────────────────
 ENTITIES = ['Customer', 'Product', 'Order', 'Dashboard', 'Navigation', 'Modal']
@@ -134,20 +134,10 @@ def _generate_pages(
 
 
 def _write_static_files(output_dir: str) -> None:
-    """Copy BasePage.js and ApiHelper.js from reference; scaffold config files."""
+    """Copy BasePage.js and ApiHelper.js from reference."""
     # BasePage.js and ApiHelper.js — copy verbatim from reference e2e/
     writer.copy_reference_file('pages/BasePage.js', output_dir)
     writer.copy_reference_file('utils/ApiHelper.js', output_dir)
-
-    # playwright.config.cjs and package.json — copy from automation/ root
-    automation_dir = os.path.normpath(os.path.join(_HERE, '..'))
-    for fname in ('playwright.config.cjs', 'package.json'):
-        src  = os.path.join(automation_dir, fname)
-        dest = os.path.join(output_dir, '..', fname)  # sibling of e2e-generated/
-        if os.path.exists(src) and not os.path.exists(dest):
-            import shutil
-            shutil.copy2(src, dest)
-            print(f'  [copy]  {dest}')
 
 
 def _write_barrel(output_dir: str) -> None:

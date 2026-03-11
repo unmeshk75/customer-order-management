@@ -1,11 +1,10 @@
 {
-  "name": "customer-order-management-e2e",
-  "version": "1.0.0",
-  "description": "Playwright E2E test suite for customer-order-management",
+  "name": "automation",
+  "private": true,
   "scripts": {
-    "test": "playwright test",
-    "test:headed": "playwright test --headed",
-    "test:ui": "playwright test --ui",
+    "test": "playwright test --config=playwright.config.cjs",
+    "test:headed": "playwright test --headed --config=playwright.config.cjs",
+    "test:ui": "playwright test --ui --config=playwright.config.cjs",
     "report": "playwright show-report"
   },
   "devDependencies": {
