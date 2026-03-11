@@ -19,12 +19,56 @@ CLI toggle:
 import os
 import platform
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
 # On Windows, npm global CLIs are installed as .cmd wrappers.
 # subprocess needs shell=True (or the .cmd suffix) to find them.
 _IS_WINDOWS = platform.system() == 'Windows'
+
+
+def _npm_global_bin() -> str | None:
+    """Return the npm global bin directory (e.g. %APPDATA%\\npm on Windows)."""
+    try:
+        result = subprocess.run(
+            'npm bin -g', capture_output=True, text=True, shell=True
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
+
+
+def _find_claude_exe() -> str:
+    """
+    Return the path to the claude CLI executable, searching the npm global
+    bin dir when it is not on PATH (common in VSCode / terminal-less shells).
+    """
+    # 1. Already on PATH?
+    found = shutil.which('claude') or shutil.which('claude.cmd')
+    if found:
+        return found
+
+    # 2. Try the npm global bin dir explicitly.
+    npm_bin = _npm_global_bin()
+    if npm_bin:
+        for name in ('claude.cmd', 'claude'):
+            candidate = Path(npm_bin) / name
+            if candidate.exists():
+                return str(candidate)
+
+    # 3. Windows fallback: %APPDATA%\npm
+    if _IS_WINDOWS:
+        appdata = os.environ.get('APPDATA', '')
+        if appdata:
+            for name in ('claude.cmd', 'claude'):
+                candidate = Path(appdata) / 'npm' / name
+                if candidate.exists():
+                    return str(candidate)
+
+    return 'claude'  # let the OS error surface naturally
 
 from dotenv import load_dotenv
 
@@ -113,15 +157,16 @@ class SDKClient:
 
     def __init__(self, model: str = MODEL):
         self.model = model
+        self._claude_exe = _find_claude_exe()
         self._check_claude_available()
 
     def _check_claude_available(self) -> None:
         try:
             result = subprocess.run(
-                'claude --version',
+                f'"{self._claude_exe}" --version',
                 capture_output=True,
                 text=True,
-                shell=True,          # resolves claude.cmd on Windows
+                shell=True,          # resolves .cmd wrappers on Windows
             )
         except Exception as exc:
             raise EnvironmentError(
@@ -133,6 +178,7 @@ class SDKClient:
             raise EnvironmentError(
                 '`claude` CLI not found on PATH. '
                 'Install with: npm install -g @anthropic-ai/claude-code\n'
+                f'Looked for: {self._claude_exe}\n'
                 f'stderr: {result.stderr.strip()}'
             )
 
@@ -157,10 +203,10 @@ class SDKClient:
         # On Windows, npm global CLIs are .cmd wrappers — need shell=True.
         # On Unix, use a list (safer, no length concern).
         if _IS_WINDOWS:
-            cmd: str | list = f'claude --print --model {self.model}'
+            cmd: str | list = f'"{self._claude_exe}" --print --model {self.model}'
             use_shell = True
         else:
-            cmd = ['claude', '--print', '--model', self.model]
+            cmd = [self._claude_exe, '--print', '--model', self.model]
             use_shell = False
 
         process = subprocess.Popen(

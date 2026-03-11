@@ -3,7 +3,8 @@ const { defineConfig, devices } = require('@playwright/test');
 const CHROME_PATH = process.env.CHROME_PATH || 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe';
 
 module.exports = defineConfig({
-  testDir: './e2e-generated/tests',
+  testDir: '.',
+  testMatch: '**/*.spec.js',
   timeout: 30 * 1000,
   expect: {
     timeout: 5000
