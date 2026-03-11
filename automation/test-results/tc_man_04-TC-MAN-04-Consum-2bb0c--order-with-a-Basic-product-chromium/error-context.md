@@ -1,0 +1,85 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - heading "Customer Order Management" [level=1] [ref=e5]
+    - generic [ref=e6]:
+      - button "Dashboard" [ref=e7] [cursor=pointer]
+      - button "Customers" [ref=e8] [cursor=pointer]
+      - button "Products" [ref=e9] [cursor=pointer]
+      - button "Orders" [ref=e10] [cursor=pointer]
+  - main [ref=e11]:
+    - generic [ref=e12]:
+      - heading "Orders" [level=2] [ref=e13]
+      - generic [ref=e14]:
+        - heading "Create Order" [level=3] [ref=e15]
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - generic [ref=e18]: "1"
+            - generic [ref=e19]: Customer & Settings
+          - generic [ref=e20]:
+            - generic [ref=e21]: "2"
+            - generic [ref=e22]: Products
+          - generic [ref=e23]:
+            - generic [ref=e24]: "3"
+            - generic [ref=e25]: Review & Confirm
+        - group "Products *" [ref=e27]:
+          - generic [ref=e28]: Products *
+          - paragraph [ref=e29]:
+            - text: "Available products for Consumer customers:"
+            - strong [ref=e30]: Basic, Professional
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - generic [ref=e33]: Product
+              - combobox "Product" [ref=e34]:
+                - option "Select Product" [selected]
+                - option "Kopan CLI (Professional) — $20/seat"
+                - option "Professional Plan (Professional) — $29.99/seat"
+                - option "Basic Plan TC03 (Basic) — $9.99/seat"
+                - option "Professional Plan TC03 (Professional) — $19.99/seat"
+                - option "Basic TC04 (Basic) — $9.99/seat"
+                - option "Professional TC04 (Professional) — $19.99/seat"
+                - option "Basic TC05 (Basic) — $9.99/seat"
+                - option "Professional TC05 (Professional) — $19.99/seat"
+                - option "Basic Plan TC03 (Basic) — $9.99/seat"
+                - option "Professional Plan TC03 (Professional) — $19.99/seat"
+                - option "Basic TC04 (Basic) — $9.99/seat"
+                - option "Professional TC04 (Professional) — $19.99/seat"
+                - option "Basic Plan TC03 (Basic) — $9.99/seat"
+                - option "Professional Plan TC03 (Professional) — $19.99/seat"
+                - option "Basic Plan TC03 (Basic) — $9.99/seat"
+                - option "Professional Plan TC03 (Professional) — $19.99/seat"
+                - option "Basic Plan TC03 (Basic) — $9.99/seat"
+                - option "Professional Plan TC03 (Professional) — $19.99/seat"
+                - option "Basic Plan TC03 (Basic) — $9.99/seat"
+                - option "Professional Plan TC03 (Professional) — $19.99/seat"
+                - option "Basic Plan TC03 (Basic) — $9.99/seat"
+                - option "Professional Plan TC03 (Professional) — $19.99/seat"
+                - option "Basic Plan TC03 (Basic) — $9.99/seat"
+                - option "Professional Plan TC03 (Professional) — $19.99/seat"
+                - option "Basic Plan TC03 (Basic) — $9.99/seat"
+                - option "Professional Plan TC03 (Professional) — $19.99/seat"
+                - option "Basic Plan TC03 (Basic) — $9.99/seat"
+                - option "Professional Plan TC03 (Professional) — $19.99/seat"
+                - option "Basic TC04 (Basic) — $9.99/seat"
+                - option "Professional TC04 (Professional) — $19.99/seat"
+                - option "Basic Plan TC03 (Basic) — $9.99/seat"
+                - option "Professional Plan TC03 (Professional) — $19.99/seat"
+                - option "Basic TC04 (Basic) — $9.99/seat"
+                - option "Professional TC04 (Professional) — $19.99/seat"
+                - option "Basic TC05 (Basic) — $9.99/seat"
+                - option "Professional TC05 (Professional) — $19.99/seat"
+                - option "Basic tc04-1773217990624 (Basic) — $9.99/seat"
+                - option "Prof tc04-1773217990624 (Professional) — $19.99/seat"
+                - option "Basic tc04-1773217992336 (Basic) — $9.99/seat"
+                - option "Prof tc04-1773217992336 (Professional) — $19.99/seat"
+            - generic [ref=e35]:
+              - generic [ref=e36]: Seats
+              - spinbutton "Seats" [ref=e37]: "1"
+          - button "Add Another Product" [ref=e38] [cursor=pointer]
+        - generic [ref=e39]:
+          - button "Back" [ref=e40] [cursor=pointer]
+          - button "Next" [disabled] [ref=e41]
+          - button "Cancel" [ref=e42] [cursor=pointer]
+```
