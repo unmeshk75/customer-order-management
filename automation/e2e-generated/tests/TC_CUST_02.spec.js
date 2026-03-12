@@ -2,19 +2,20 @@ import { test, expect } from '@playwright/test';
 import { CustomerPage } from '../pages/CustomerPage.js';
 import { ApiHelper } from '../utils/ApiHelper.js';
 
-test.describe('TC_CUST_01-TC02: [Negative] Non-US country keeps State as disabled input', () => {
+test.describe('TC-CUST_01-TC02: [Negative] Non-US country keeps State as disabled input', () => {
 
   test.beforeAll(async ({ request }) => {
-    // No seed data required for this UI-only negative test
+    const api = new ApiHelper(request);
+    await api.cleanupCustomersByName('TC02');
   });
 
   test.afterAll(async ({ request }) => {
-    // No seeded data to clean up
+    const api = new ApiHelper(request);
+    await api.cleanupCustomersByName('TC02');
   });
 
   test('[Negative] Non-US country keeps State as disabled input', async ({ page }) => {
     const customerPage = new CustomerPage(page);
-
     await customerPage.navigateToCustomers();
     await customerPage.openCreateForm();
 
@@ -22,13 +23,13 @@ test.describe('TC_CUST_01-TC02: [Negative] Non-US country keeps State as disable
     await customerPage.loc.countryInput.fill('Canada');
     await customerPage.loc.countryInput.blur();
 
-    // Wait for the state input to appear (non-US path)
-    await expect(customerPage.loc.stateInput).toBeVisible();
+    // Wait for stateInput to be visible (non-US branch)
+    await customerPage.loc.stateInput.waitFor({ state: 'visible' });
 
-    // State SELECT must NOT be present / visible
+    // Assert State SELECT is NOT present / not visible
     await expect(customerPage.loc.stateSelect).not.toBeVisible();
 
-    // State INPUT must be visible and disabled
+    // Assert State INPUT is visible and disabled
     await expect(customerPage.loc.stateInput).toBeVisible();
     await expect(customerPage.loc.stateInput).toBeDisabled();
 

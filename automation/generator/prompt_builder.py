@@ -232,8 +232,9 @@ CRITICAL — EXACT IMPORTS (copy these verbatim, do NOT change class names or pa
 FILE STRUCTURE RULES:
   • ES module imports only
   • One test.describe block per test case group
-  • test.beforeAll: use ApiHelper to seed required data via API
-  • test.afterAll: use ApiHelper to clean up all seeded data
+  • ❌ NEVER save `let api;` globally or reuse a {{ request }} fixture across tests
+  • test.beforeAll: instantiate `const api = new ApiHelper(request);` locally
+  • test.afterAll: instantiate `const api = new ApiHelper(request);` locally
   • Individual tests: [Positive] or [Negative] prefix in test name
   • Each test is independent: navigate fresh, interact, assert, clean up
   ❌ NEVER shadow the imported class with a same-named variable:
