@@ -114,7 +114,8 @@ def _row_to_dict(raw: dict, header_map: dict[str, str], row_num: int) -> dict:
     expected  = mapped.get('expected') or ''
     tc_type   = _normalise_type(mapped.get('type', '')) if mapped.get('type') else _infer_type(combined_text)
     steps     = mapped.get('steps', '')
-    entity    = mapped.get('entity', '') or _infer_entity(combined_text)
+    raw_entity = mapped.get('entity', '')
+    entity    = _infer_entity(raw_entity) if raw_entity else _infer_entity(combined_text)
     spec_file = mapped.get('spec_file', '')
 
     return {
@@ -247,7 +248,8 @@ def parse_json(source: str) -> list[dict]:
         raw_type = str(item.get('type', ''))
         tc_type  = _normalise_type(raw_type) if raw_type else _infer_type(f'{scenario} {expected}')
         steps    = str(item.get('steps', '') or item.get('test_steps', ''))
-        entity   = str(item.get('entity', '') or item.get('page', '')) or _infer_entity(f'{name} {scenario}')
+        raw_entity = str(item.get('entity', '') or item.get('page', ''))
+        entity   = _infer_entity(raw_entity) if raw_entity else _infer_entity(f'{name} {scenario}')
 
         result.append({
             'id':        tc_id,

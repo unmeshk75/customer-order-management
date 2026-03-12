@@ -1,0 +1,689 @@
+=== SYSTEM ===
+You are an expert Playwright test automation engineer.
+Generate a single Playwright test spec file.
+Do not overthink. Output the file directly without any reasoning or analysis preamble.
+
+CRITICAL — EXACT IMPORTS (copy these verbatim, do NOT change class names or paths):
+  import { test, expect } from '@playwright/test';
+  import { CustomerPage } from '../pages/CustomerPage.js';
+  import { ApiHelper } from '../utils/ApiHelper.js';
+  ❌ NEVER use plural or variant names (e.g. CustomersPage, Customers).
+  ✅ The page class is ALWAYS named exactly: CustomerPage
+
+FILE STRUCTURE RULES:
+  • ES module imports only
+  • One test.describe block per test case group
+  • test.beforeAll: use ApiHelper to seed required data via API
+  • test.afterAll: use ApiHelper to clean up all seeded data
+  • Individual tests: [Positive] or [Negative] prefix in test name
+  • Each test is independent: navigate fresh, interact, assert, clean up
+  ❌ NEVER shadow the imported class with a same-named variable:
+     BAD:  const CustomerPage = new CustomerPage(page)   ← TDZ crash
+     GOOD: const customerPage = new CustomerPage(page)   ← camelCase variable
+  Note that CustomerPage is the correct class name.
+
+CRITICAL CONSTRAINT — WAITING STRATEGY:
+  ❌ NEVER use:  setTimeout, page.waitForTimeout, any hardcoded ms delay
+  ✅ ALWAYS use explicit Playwright mechanisms:
+      • locator.waitFor({ state: 'visible' | 'hidden' | 'attached' | 'detached' })
+      • expect(locator).toBeVisible()
+      • expect(locator).toBeEnabled()
+      • expect(locator).toHaveCount(n)
+      • expect(locator).toHaveText(...)
+      • expect(async () => { ... }).toPass()
+  These have built-in retry logic and no hardcoded delays.
+
+ASSERTION RULES:
+  • Use expect(locator).toBeVisible() not manual waitForVisible
+  • Use expect(locator).toBeEnabled() / toBeDisabled()
+  • Use expect(locator).toHaveValue('x') / toHaveText('x') / toContainText('x')
+  • Use expect(locator).toHaveAttribute('attr', 'val')
+  • Use expect(locator).toHaveCount(n) for lists
+  • Use expect(locator).not.toBeVisible() for hidden assertions
+  • XPath locators from the page object's .loc property can be used directly in expect()
+
+OUTPUT: Return ONLY the raw JavaScript file content. No markdown, no explanation.
+
+
+=== USER ===
+Generate a Playwright spec file for the following test cases.
+
+REMINDER — use these exact imports at the top of the file:
+  import { test, expect } from '@playwright/test';
+  import { CustomerPage } from '../pages/CustomerPage.js';
+  import { ApiHelper } from '../utils/ApiHelper.js';
+
+=== TEST CASES ===
+[
+  {
+    "id": "TC_CUST_01-TC02",
+    "name": "[Negative] Non-US country keeps State as disabled input",
+    "scenario": "When a user enters a country other than 'US', the State field remains a disabled text input (not a dropdown).",
+    "expected": "\u2022 State SELECT is NOT present in the DOM.\n\u2022 State INPUT remains visible and disabled.",
+    "type": "negative",
+    "steps": "1. Navigate to Customers and open 'Add Customer' form.\n2. Enter 'Canada' in the Country field.\n3. Assert State SELECT (data-testid='customer-state-select') is hidden.\n4. Assert State INPUT is visible and disabled.",
+    "entity": "Customer",
+    "spec_file": "TC_CUST_02.spec.js"
+  }
+]
+
+=== CustomerPage.js (page object to use — its .loc property has all locators) ===
+/**
+ * CustomerPage.js
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Page Object for the Customer module.
+ *
+ * ❌ REMOVED  : waitForLoadState('networkidle')
+ * ✅ REPLACED :
+ *   • After delete   → waitForDetached(rowLocator)  instead of networkidle
+ *   • Country → State dynamic branch uses:
+ *       waitForVisible(stateSelect)   when country = "US"
+ *       waitForVisible(stateInput)    when country ≠ "US"
+ *       isVisible() for conditional select vs input branching
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+import { BasePage } from './BasePage.js';
+import { CustomerLocators } from '../locators/CustomerLocators.js';
+import { NavigationLocators } from '../locators/NavigationLocators.js';
+
+export class CustomerPage extends BasePage {
+  constructor(page) {
+    super(page);
+    this.navLoc = new NavigationLocators(page);
+    this.loc = new CustomerLocators(page);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Navigation
+  // ──────────────────────────────────────────────────────────────────────────
+
+  async navigateToCustomers() {
+    await this.goto();
+    // Explicit wait: nav button must be visible before clicking
+    await this.waitForVisible(this.navLoc.customersBtn);
+    await this.navLoc.customersBtn.click();
+    // Explicit wait: list container must appear after navigation
+    await this.waitForVisible(this.loc.customerListContainer);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Form Actions
+  // ──────────────────────────────────────────────────────────────────────────
+
+  async openCreateForm() {
+    // Explicit wait: button must be enabled before clicking
+    await this.waitForEnabled(this.loc.createCustomerBtn);
+    await this.loc.createCustomerBtn.click();
+    // Explicit wait: form must appear in DOM and be visible
+    await this.waitForVisible(this.loc.customerForm);
+  }
+
+  async openEditFormById(id) {
+    const editBtn = this.loc.editCustomerBtn(id);
+    // Explicit wait: specific edit button must be visible
+    await this.waitForVisible(editBtn);
+    await editBtn.click();
+    // Explicit wait: form must appear
+    await this.waitForVisible(this.loc.customerForm);
+  }
+
+  async openEditFormForFirst() {
+    await this.waitForVisible(this.loc.firstEditBtn);
+    await this.loc.firstEditBtn.click();
+    await this.waitForVisible(this.loc.customerForm);
+  }
+
+  /**
+   * Fill customer form fields.
+   *
+   * ╔══════════════════════════════════════════════════════════════════╗
+   * ║  DYNAMIC BEHAVIOUR — Country ↔ State                           ║
+   * ║                                                                  ║
+   * ║  When country = "US":                                           ║
+   * ║    React swaps the disabled <input> for a <select> dropdown.    ║
+   * ║    We MUST wait for the dropdown to appear before interacting.  ║
+   * ║                                                                  ║
+   * ║  When country ≠ "US" (e.g. "Canada"):                          ║
+   * ║    React renders a disabled <input> placeholder instead.        ║
+   * ║    We wait for the disabled input to appear.                    ║
+   * ║                                                                  ║
+   * ║  Strategy used:                                                  ║
+   * ║    • waitForVisible(stateSelect)  — explicit wait for dropdown  ║
+   * ║    • waitForVisible(stateInput)   — explicit wait for input     ║
+   * ║    • isVisible()                  — boolean branch (no throw)   ║
+   * ╚══════════════════════════════════════════════════════════════════╝
+   *
+   * @param {Object} data
+   */
+  async fillCustomerForm(data) {
+    if (data.name         !== undefined) await this.clearAndFill(this.loc.nameInput,    data.name);
+    if (data.customerType !== undefined) await this.loc.typeSelect.selectOption(data.customerType);
+    if (data.email        !== undefined) await this.clearAndFill(this.loc.emailInput,   data.email);
+    if (data.phone        !== undefined) await this.clearAndFill(this.loc.phoneInput,   data.phone);
+    if (data.street       !== undefined) await this.clearAndFill(this.loc.streetInput,  data.street);
+    if (data.city         !== undefined) await this.clearAndFill(this.loc.cityInput,    data.city);
+
+    if (data.country !== undefined) {
+      // Fill the country field
+      await this.clearAndFill(this.loc.countryInput, data.country);
+
+      if (data.country === 'US') {
+        // ▶ DYNAMIC WAIT: React replaces disabled input with a <select> dropdown.
+        //   We wait explicitly for the dropdown to become visible — no hardcoded ms.
+        await this.waitForVisible(this.loc.stateSelect);
+      } else {
+        // ▶ DYNAMIC WAIT: React renders a disabled input for non-US countries.
+        //   Wait for that disabled input to be visible.
+        await this.waitForVisible(this.loc.stateInput);
+      }
+    }
+
+    if (data.state !== undefined) {
+      // ▶ DYNAMIC BRANCH: decide which element to use based on current DOM state
+      //   isVisible() returns boolean — safe, never throws
+      const dropdownVisible = await this.isVisible(this.loc.stateSelect);
+      if (dropdownVisible) {
+        // Dropdown is present → select by value
+        await this.loc.stateSelect.selectOption(data.state);
+      }
+      // If dropdown is not visible, state is not applicable for this country
+    }
+
+    if (data.zip !== undefined) await this.clearAndFill(this.loc.zipInput, data.zip);
+  }
+
+  /**
+   * Submit the customer form.
+   * ✅ Explicit wait: wait for the form to detach from DOM (means submit succeeded),
+   *    then wait for the list container to be visible again.
+   */
+  async submitForm() {
+    await this.waitForEnabled(this.loc.submitBtn);
+    await this.loc.submitBtn.click();
+    // Explicit wait: form disappears on success
+    await this.waitForHidden(this.loc.customerForm);
+    // Explicit wait: list must re-render
+    await this.waitForVisible(this.loc.customerListContainer);
+  }
+
+  /**
+   * Cancel the customer form.
+   * ✅ Explicit wait: form disappears, list re-appears.
+   */
+  async cancelForm() {
+    await this.loc.cancelBtn.click();
+    await this.waitForHidden(this.loc.customerForm);
+    await this.waitForVisible(this.loc.customerListContainer);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // CRUD helpers
+  // ──────────────────────────────────────────────────────────────────────────
+
+  async createCustomer(data) {
+    await this.openCreateForm();
+    await this.fillCustomerForm(data);
+    await this.submitForm();
+  }
+
+  /**
+   * Delete a customer by ID and wait for its row to disappear.
+   * ✅ Explicit wait: row must detach from DOM — no networkidle needed.
+   * @param {number} id
+   */
+  async deleteCustomerById(id) {
+    const row = this.page.locator(`[data-testid="customer-id-${id}"]`).locator('..');
+    await this.waitForVisible(row);
+    await this.acceptDialog();
+    await this.loc.deleteCustomerBtn(id).click();
+    // Explicit wait: row detaches from DOM when deletion is complete
+    await this.waitForDetached(row);
+  }
+
+  /** Delete first customer row visible in the table. */
+  async deleteFirstCustomer() {
+    const firstRow = this.loc.customerTableRows.first();
+    await this.waitForVisible(firstRow);
+    await this.acceptDialog();
+    await this.loc.firstDeleteBtn.click();
+    await this.waitForDetached(firstRow);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Query helpers
+  // ──────────────────────────────────────────────────────────────────────────
+
+  async getRowCount()        { return await this.loc.customerTableRows.count(); }
+  async isFormErrorVisible() { return await this.isVisible(this.loc.formError); }
+  async getFormErrorText()   { return await this.getText(this.loc.formError); }
+
+  /**
+   * Returns whether the US state dropdown is currently visible.
+   * Used in tests to assert the dynamic Country→State switch.
+   * @returns {Promise<boolean>}
+   */
+  async isStateDropdownVisible() {
+    return await this.isVisible(this.loc.stateSelect);
+  }
+
+  /**
+   * Returns whether the disabled state text-input is currently visible.
+   * Visible only when country ≠ "US".
+   * @returns {Promise<boolean>}
+   */
+  async isStateInputVisible() {
+    return await this.isVisible(this.loc.stateInput);
+  }
+
+  /**
+   * Returns whether the disabled state input is disabled.
+   * @returns {Promise<boolean>}
+   */
+  async isStateInputDisabled() {
+    const enabled = await this.isEnabled(this.loc.stateInput);
+    return !enabled;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Granular field-fill helpers (used when filling one field at a time)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  async fillName(name)               { await this.clearAndFill(this.loc.nameInput, name); }
+  async fillEmail(email)             { await this.clearAndFill(this.loc.emailInput, email); }
+  async fillPhone(phone)             { await this.clearAndFill(this.loc.phoneInput, phone); }
+  async fillStreet(street)           { await this.clearAndFill(this.loc.streetInput, street); }
+  async fillCity(city)               { await this.clearAndFill(this.loc.cityInput, city); }
+  async fillZip(zip)                 { await this.clearAndFill(this.loc.zipInput, zip); }
+  async fillCompanyName(name)        { await this.clearAndFill(this.loc.companyNameInput, name); }
+  async selectType(type)             { await this.selectByValue(this.loc.typeSelect, type); }
+  async selectState(state)           { await this.waitForVisible(this.loc.stateSelect); await this.loc.stateSelect.selectOption(state); }
+
+  /**
+   * Fill the country field and blur to trigger the React onChange.
+   * Automatically waits for the state field to update.
+   */
+  async fillCountry(country) {
+    await this.clearAndFill(this.loc.countryInput, country);
+    await this.loc.countryInput.blur();
+    if (country === 'US') {
+      await this.waitForVisible(this.loc.stateSelect);
+    } else {
+      await this.waitForVisible(this.loc.stateInput);
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Form state helpers
+  // ──────────────────────────────────────────────────────────────────────────
+
+  async getFormHeading()          { return this.getText(this.loc.formHeading); }
+  async getFormError()            { return this.getText(this.loc.formError); }
+  async getStateLabelText()       { return this.getText(this.loc.stateLabel); }
+  async isCompanyNameVisible()    { return this.isVisible(this.loc.companyNameGroup); }
+
+  /** Click submit but do NOT wait for form to close — used for negative/error tests. */
+  async submitFormExpectError() {
+    await this.waitForEnabled(this.loc.submitBtn);
+    await this.loc.submitBtn.click();
+    await this.waitForVisible(this.loc.formError);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Edit / expand / delete (aliased for convenience)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /** Alias for openEditFormById — used by tests that call cust.openEditForm(id). */
+  async openEditForm(id) { return this.openEditFormById(id); }
+
+  /** Delete a customer via modal confirmation. */
+  async deleteCustomer(id) {
+    const row = this.loc.customerRow(id);
+    await this.waitForVisible(row);
+    await this.clickWhenReady(this.loc.deleteCustomerBtn(id));
+    await this.waitForVisible(this.page.getByTestId('modal-overlay').filter({ hasClass: /modal-open/ }).or(
+      this.page.locator('xpath=//div[contains(@class,"modal-overlay") and contains(@class,"modal-open")]')
+    ));
+    await this.clickWhenReady(this.page.getByTestId('modal-confirm'));
+    await this.waitForDetached(row);
+  }
+
+  /** Type into the search input and wait for the table to update. */
+  async search(term) {
+    await this.clearAndFill(this.loc.searchInput, term);
+    // Brief settle — table re-renders after debounce
+    await this.page.waitForTimeout(300);
+  }
+
+  /** Expand a customer's detail row. */
+  async expandRow(id) {
+    await this.clickWhenReady(this.loc.expandRowBtn(id));
+    await this.waitForVisible(this.loc.detailRow(id));
+  }
+
+  /** Collapse a customer's detail row. */
+  async collapseRow(id) {
+    await this.clickWhenReady(this.loc.expandRowBtn(id));
+    await this.waitForHidden(this.loc.detailRow(id));
+  }
+}
+
+
+
+
+=== ApiHelper.js (for beforeAll/afterAll data setup) ===
+/**
+ * ApiHelper.js
+ * ─────────────────────────────────────────────────────────────────────────────
+ * REST API helpers for test setup and teardown.
+ * Uses Playwright's built-in `request` context — no extra HTTP client needed.
+ *
+ * Usage in tests:
+ *   import { ApiHelper } from '../utils/ApiHelper.js';
+ *   const api = new ApiHelper(request);
+ *   const customer = await api.createCustomer({ ... });
+ *   await api.deleteCustomer(customer.id);
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+export class ApiHelper {
+  /** @param {import('@playwright/test').APIRequestContext} request */
+  constructor(request) {
+    this.request = request;
+    this.base    = process.env.API_URL || 'http://localhost:8000/api';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Customers
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async getAllCustomers() {
+    const res = await this.request.get(`${this.base}/customers`);
+    return res.json();
+  }
+
+  async createCustomer(data) {
+    const res = await this.request.post(`${this.base}/customers`, { data });
+    if (!res.ok()) {
+      const body = await res.json();
+      throw new Error(`createCustomer failed: ${JSON.stringify(body)}`);
+    }
+    return res.json();
+  }
+
+  async deleteCustomer(id) {
+    await this.request.delete(`${this.base}/customers/${id}`);
+  }
+
+  /** Delete all customers whose name contains the given pattern. */
+  async cleanupCustomersByName(namePattern) {
+    const customers = await this.getAllCustomers();
+    for (const c of customers) {
+      if (c.name && c.name.includes(namePattern)) {
+        await this.deleteCustomer(c.id).catch(() => {});
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Products
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async getAllProducts() {
+    const res = await this.request.get(`${this.base}/products`);
+    return res.json();
+  }
+
+  async createProduct(data) {
+    const res = await this.request.post(`${this.base}/products`, { data });
+    if (!res.ok()) {
+      const body = await res.json();
+      throw new Error(`createProduct failed: ${JSON.stringify(body)}`);
+    }
+    return res.json();
+  }
+
+  async deleteProduct(id) {
+    await this.request.delete(`${this.base}/products/${id}`);
+  }
+
+  /** Delete all products whose name contains the given pattern. */
+  async cleanupProductsByName(namePattern) {
+    const products = await this.getAllProducts();
+    for (const p of products) {
+      if (p.name && p.name.includes(namePattern)) {
+        await this.deleteProduct(p.id).catch(() => {});
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Orders
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async getAllOrders() {
+    const res = await this.request.get(`${this.base}/orders`);
+    return res.json();
+  }
+
+  async createOrder(data) {
+    const res = await this.request.post(`${this.base}/orders`, { data });
+    if (!res.ok()) {
+      const body = await res.json();
+      throw new Error(`createOrder failed: ${JSON.stringify(body)}`);
+    }
+    return res.json();
+  }
+
+  async deleteOrder(id) {
+    await this.request.delete(`${this.base}/orders/${id}`);
+  }
+
+  async getProductById(id) {
+    const res = await this.request.get(`${this.base}/products/${id}`);
+    return res.json();
+  }
+
+  async getOrderById(id) {
+    const res = await this.request.get(`${this.base}/orders/${id}`);
+    return res.json();
+  }
+
+  async updateOrder(id, data) {
+    const res = await this.request.put(`${this.base}/orders/${id}`, { data });
+    if (!res.ok()) {
+      const body = await res.json();
+      throw new Error(`updateOrder failed: ${JSON.stringify(body)}`);
+    }
+    return res.json();
+  }
+
+  /** Set an order's status to 'Cancelled' via API. */
+  async cancelOrder(id) {
+    return this.updateOrder(id, { status: 'Cancelled' });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Dashboard
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async getDashboard() {
+    const res = await this.request.get(`${this.base}/dashboard`);
+    return res.json();
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Direct API assertion helpers
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * POST an order and return the raw response (for negative testing).
+   * Does NOT throw on non-200 — callers check status themselves.
+   */
+  async postOrderRaw(data) {
+    return this.request.post(`${this.base}/orders`, { data });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Compound setup helpers
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Create a Consumer customer + Basic product + order.
+   * Returns { customer, product, order }.
+   */
+  async setupConsumerOrderWithBasic(suffix) {
+    const s = suffix || Date.now();
+    const customer = await this.createCustomer({
+      name: `Consumer ${s}`, customer_type: 'Consumer',
+      email: `c.${s}@setup.test`, account_status: 'Active', contact_preference: 'Email',
+    });
+    const product = await this.createProduct({
+      name: `Basic Product ${s}`, product_type: 'Basic',
+      price_per_seat: 10.00, stock_quantity: 50,
+    });
+    const order = await this.createOrder({
+      customer_id: customer.id, priority: 'Medium',
+      discount_percentage: 0,
+      products: [{ product_id: product.id, seats: 2 }],
+    });
+    return { customer, product, order };
+  }
+
+  /**
+   * Create an SMB customer + Professional product + order.
+   * Returns { customer, product, order }.
+   */
+  async setupSMBOrderWithProfessional(suffix) {
+    const s = suffix || Date.now();
+    const customer = await this.createCustomer({
+      name: `SMB ${s}`, customer_type: 'SMB',
+      email: `smb.${s}@setup.test`, company_name: `Corp ${s}`,
+      account_status: 'Active', contact_preference: 'Email',
+    });
+    const product = await this.createProduct({
+      name: `Professional Product ${s}`, product_type: 'Professional',
+      price_per_seat: 30.00, stock_quantity: 40,
+    });
+    const order = await this.createOrder({
+      customer_id: customer.id, priority: 'High',
+      discount_percentage: 0,
+      products: [{ product_id: product.id, seats: 1 }],
+    });
+    return { customer, product, order };
+  }
+}
+
+
+=== PATTERN EXAMPLE (tc_man_01.spec.js — follow this exact structure) ===
+/**
+ * tc_man_01.spec.js
+ * ─────────────────────────────────────────────────────────────────────────────
+ * TC-MAN-01: Typing "US" in Country dynamically replaces the disabled state
+ *            input with a populated state <select> dropdown.
+ *
+ * Assertions use:
+ *  • Locator-based waits (no hardcoded ms)
+ *  • customerPage.loc.stateLabel — XPath locator from CustomerLocators
+ *  • XPath in-test assertion for option count
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+import { test, expect } from '@playwright/test';
+import { CustomerPage } from '../pages/CustomerPage.js';
+
+const ALL_US_STATES = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
+  'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
+  'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
+  'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY',
+];
+
+test.describe('TC-MAN-01: US Country Entry Dynamically Renders State Dropdown', () => {
+
+  test('[Positive] State input is disabled before country is set', async ({ page }) => {
+    const customerPage = new CustomerPage(page);
+    await customerPage.navigateToCustomers();
+    await customerPage.openCreateForm();
+
+    // State field starts as a disabled plain input
+    await expect(customerPage.loc.stateInput).toBeDisabled();
+    await expect(customerPage.loc.stateInput).toHaveAttribute('placeholder', 'Only for US addresses');
+
+    // Cancel cleanly
+    await customerPage.cancelForm();
+  });
+
+  test('[Positive] Typing US replaces disabled input with state dropdown', async ({ page }) => {
+    const customerPage = new CustomerPage(page);
+    await customerPage.navigateToCustomers();
+    await customerPage.openCreateForm();
+
+    // Set country to US and blur
+    await customerPage.loc.countryInput.fill('US');
+    await customerPage.loc.countryInput.blur();
+
+    // Disabled input disappears, dropdown appears
+    await expect(customerPage.loc.stateInput).not.toBeVisible();
+    await expect(customerPage.loc.stateSelect).toBeVisible();
+    await expect(customerPage.loc.stateSelect).toBeEnabled();
+
+    await customerPage.cancelForm();
+  });
+
+  test('[Positive] State dropdown contains all 50 US states', async ({ page }) => {
+    const customerPage = new CustomerPage(page);
+    await customerPage.navigateToCustomers();
+    await customerPage.openCreateForm();
+
+    await customerPage.loc.countryInput.fill('US');
+    await customerPage.loc.countryInput.blur();
+    await customerPage.waitForVisible(customerPage.loc.stateSelect);
+
+    // Collect non-placeholder option values
+    const options = await customerPage.loc.stateSelect.locator('option').all();
+    const values = [];
+    for (const opt of options) {
+      const v = await opt.getAttribute('value');
+      if (v) values.push(v);
+    }
+
+    expect(values.length).toBe(50);
+    for (const state of ALL_US_STATES) {
+      expect(values).toContain(state);
+    }
+
+    await customerPage.cancelForm();
+  });
+
+  test('[Positive] Selecting a state from dropdown sets the value', async ({ page }) => {
+    const customerPage = new CustomerPage(page);
+    await customerPage.navigateToCustomers();
+    await customerPage.openCreateForm();
+
+    await customerPage.loc.countryInput.fill('US');
+    await customerPage.loc.countryInput.blur();
+    await customerPage.waitForVisible(customerPage.loc.stateSelect);
+
+    await customerPage.loc.stateSelect.selectOption('CA');
+    await expect(customerPage.loc.stateSelect).toHaveValue('CA');
+
+    // State label (XPath locator from CustomerLocators) should show required marker
+    await expect(customerPage.loc.stateLabel).toContainText('*');
+
+    await customerPage.cancelForm();
+  });
+
+});
+
+
+Requirements:
+1. One test.describe per test case (or group them logically if same entity/scenario)
+2. Name the describe block: "TC-XXX: <test case name>"
+3. Name each test: "[Positive] ..." or "[Negative] ..."
+4. Use beforeAll to create test data via ApiHelper if the test needs existing records
+5. Use afterAll to clean up by name pattern (cleanupCustomersByName, etc.)
+6. Use explicit expect() assertions — not manual wait helpers
+7. For negative tests: submit invalid data, assert error message is visible
+8. Always cancel or clean up the form at the end of each test

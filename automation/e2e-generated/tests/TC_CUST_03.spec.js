@@ -1,98 +1,49 @@
-/**
- * TC_CUST_03.spec.js
- * ─────────────────────────────────────────────────────────────────────────────
- * TC_CUST_01-TC03: [Positive] SMB customer — company name field appears
- *                  and is submitted successfully.
- *
- * Assertions use:
- *  • Locator-based waits (no hardcoded ms)
- *  • customersPage.loc.* — XPath locators from CustomerPage
- * ─────────────────────────────────────────────────────────────────────────────
- */
-
 import { test, expect } from '@playwright/test';
 import { CustomerPage } from '../pages/CustomerPage.js';
 import { ApiHelper } from '../utils/ApiHelper.js';
 
-const TEST_NAME_PATTERN = 'SMB_TC03_';
+test.describe('TC-CUST-01-TC03: [Positive] SMB customer — company name field appears and is submitted successfully', () => {
+  let api;
+  let createdCustomerId;
 
-test.describe('TC_CUST_01-TC03: SMB Customer — Company Name Field Appears and Submits Successfully', () => {
-
-  test.afterAll(async ({ request }) => {
-    const api = new ApiHelper(request);
-    await api.cleanupCustomersByName(TEST_NAME_PATTERN);
+  test.beforeAll(async ({ request }) => {
+    api = new ApiHelper(request);
   });
 
-  test('[Positive] Company Name field is hidden when default Consumer type is selected', async ({ page }) => {
-    const customersPage = new CustomerPage(page);
-    await customersPage.navigateToCustomers();
-    await customersPage.openCreateForm();
-
-    // Company Name group should be hidden when default type is Consumer
-    await expect(customersPage.loc.companyNameGroup).not.toBeVisible();
-
-    await customersPage.cancelForm();
+  test.afterAll(async () => {
+    await api.cleanupCustomersByName('SMB TC03');
   });
 
-  test('[Positive] Company Name field becomes visible after selecting SMB type', async ({ page }) => {
-    const customersPage = new CustomerPage(page);
-    await customersPage.navigateToCustomers();
-    await customersPage.openCreateForm();
+  test('[Positive] SMB customer — company name field appears and is submitted successfully', async ({ page }) => {
+    const customerPage = new CustomerPage(page);
 
-    // Confirm Company Name is hidden before selecting SMB
-    await expect(customersPage.loc.companyNameGroup).not.toBeVisible();
+    // Step 1: Navigate to Customers section
+    await customerPage.navigateToCustomers();
 
-    // Select SMB type
-    await customersPage.loc.customerTypeSelect.selectOption('SMB');
+    // Step 2: Click 'Add Customer'
+    await customerPage.openCreateForm();
 
-    // Company Name group should now be visible
-    await expect(customersPage.loc.companyNameGroup).toBeVisible();
-    await expect(customersPage.loc.companyNameInput).toBeVisible();
-    await expect(customersPage.loc.companyNameInput).toBeEnabled();
+    // Step 3: Assert Company Name field is hidden (default type is Consumer)
+    await expect(customerPage.loc.companyNameGroup).not.toBeVisible();
 
-    await customersPage.cancelForm();
-  });
+    // Step 4: Select Type = 'SMB'
+    await customerPage.loc.typeSelect.selectOption('SMB');
 
-  test('[Positive] SMB customer with company name submits successfully and appears in customer list', async ({ page, request }) => {
-    const api = new ApiHelper(request);
-    const customersPage = new CustomerPage(page);
+    // Step 5: Assert Company Name field is now VISIBLE
+    await expect(customerPage.loc.companyNameGroup).toBeVisible();
 
-    const suffix = Date.now();
-    const customerName = `${TEST_NAME_PATTERN}${suffix}`;
-    const companyName = `SMB Corp ${suffix}`;
-    const email = `smb.tc03.${suffix}@test.example`;
-    const country = 'US';
+    // Step 6: Fill Name, Company Name, Email, Country
+    await customerPage.fillName('SMB TC03 User');
+    await customerPage.fillCompanyName('SMB TC03 Corp');
+    await customerPage.fillEmail('smb.tc03@test.example');
+    await customerPage.fillCountry('Canada');
 
-    await customersPage.navigateToCustomers();
-    await customersPage.openCreateForm();
+    // Step 7: Submit the form
+    await customerPage.submitForm();
 
-    // Assert Company Name is hidden before SMB selection
-    await expect(customersPage.loc.companyNameGroup).not.toBeVisible();
-
-    // Select Type = SMB
-    await customersPage.loc.customerTypeSelect.selectOption('SMB');
-
-    // Assert Company Name is now visible
-    await expect(customersPage.loc.companyNameGroup).toBeVisible();
-    await expect(customersPage.loc.companyNameInput).toBeEnabled();
-
-    // Fill in the form fields
-    await customersPage.loc.nameInput.fill(customerName);
-    await customersPage.loc.companyNameInput.fill(companyName);
-    await customersPage.loc.emailInput.fill(email);
-    await customersPage.loc.countryInput.fill(country);
-
-    // Submit the form
-    await customersPage.submitForm();
-
-    // Assert the customer table shows the new company name
-    await expect(customersPage.loc.customerTable).toBeVisible();
-
-    const companyCell = page.locator(`text=${companyName}`);
+    // Step 8: Assert company name appears in the customers table
+    await expect(customerPage.loc.customerListContainer).toBeVisible();
+    const companyCell = page.locator('table').getByText('SMB TC03 Corp');
     await expect(companyCell).toBeVisible();
-
-    // Cleanup
-    await api.cleanupCustomersByName(TEST_NAME_PATTERN);
   });
-
 });

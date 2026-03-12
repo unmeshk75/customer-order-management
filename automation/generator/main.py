@@ -109,7 +109,7 @@ def _generate_pages(
 
     for entity in PAGE_ENTITIES:
         if entity not in locator_map:
-            # Try to read from output dir if locators were generated in a previous run
+            # Try to read from output dir if locators were generated in a previous run]
             loc_path = os.path.join(output_dir, 'locators', f'{entity}Locators.js')
             if os.path.exists(loc_path):
                 with open(loc_path, encoding='utf-8') as f:
@@ -120,6 +120,7 @@ def _generate_pages(
 
         system, user = prompt_builder.build_page_prompt(entity, locator_map[entity])
         code = client.generate(system, user, label=f'{entity}Page.js')
+        code = _fix_page_imports(code, entity)
         generated[entity] = code
 
         out_path = os.path.join(output_dir, 'pages', f'{entity}Page.js')
@@ -248,11 +249,11 @@ def _fix_page_imports(code: str, entity: str) -> str:
     import re as _re
 
     # Fix 1: pluralised class name in import/usage
-    wrong_class = f'{entity}sPage'
     right_class = f'{entity}Page'
-    if wrong_class in code:
-        print(f'  [fix]  corrected pluralised class: {wrong_class} → {right_class}')
-        code = code.replace(wrong_class, right_class)
+    for wrong_class in [f'{entity}sPages', f'{entity}Pages', f'{entity}sPage']:
+        if wrong_class in code:
+            print(f'  [fix]  corrected pluralised class: {wrong_class} → {right_class}')
+            code = code.replace(wrong_class, right_class)
 
     # Fix 2: variable shadows imported class  →  lowercase the variable
     # Matches:  const CustomerPage = new CustomerPage(   (const/let/var)
@@ -308,7 +309,7 @@ def cmd_tests(args) -> None:
         staging_path = os.path.join(output_dir, 'parsed_test_cases.json')
         with open(staging_path, 'w', encoding='utf-8') as f:
             json.dump(test_cases, f, indent=2, ensure_ascii=False)
-        print(f'[tests] staging file saved → {staging_path}')
+        print(f'[tests] staging file saved -> {staging_path}')
 
     # Load manifest (for validation)
     try:
@@ -318,13 +319,17 @@ def cmd_tests(args) -> None:
         print('[tests] continuing without manifest validation...')
         manifest = {}
 
-    client = create_client(use_sdk=args.sdk)
+    if getattr(args, 'dry_run', False):
+        client = None
+    else:
+        client = create_client(use_sdk=args.sdk)
 
     # Group by entity, then by spec file within each entity
     groups = input_parser.group_by_entity(test_cases)
 
     for entity, tcs in groups.items():
-        print(f'\n[tests] entity: {entity} ({len(tcs)} test case(s))')
+        clean_entity = entity.encode("ascii", "ignore").decode()
+        print(f'\n[tests] entity: {clean_entity} ({len(tcs)} test case(s))')
 
         # Load page object for context
         page_code = _load_page_code(entity, output_dir)
@@ -337,9 +342,19 @@ def cmd_tests(args) -> None:
 
         for fname, group_tcs in spec_groups.items():
             ids_label = ', '.join(t['id'] for t in group_tcs)
-            print(f'  → {fname}  ({len(group_tcs)} tc: {ids_label})')
+            print(f'  -> {fname}  ({len(group_tcs)} tc: {ids_label})')
 
             system, user = prompt_builder.build_test_prompt(group_tcs, entity, page_code)
+            
+            # Save the prompt to a text file
+            prompt_fname = fname.replace('.spec.js', '') + '_prompt.txt'
+            prompt_out_path = os.path.join(output_dir, prompt_fname)
+            writer.write_file(prompt_out_path, f"=== SYSTEM ===\n{system}\n\n=== USER ===\n{user}\n")
+            
+            if getattr(args, 'dry_run', False):
+                print(f'    [dry-run] saved prompt to {prompt_fname}, skipping LLM')
+                continue
+
             code = client.generate(system, user, label=fname)
 
             # Fix LLM hallucination: pluralised page class/import names
@@ -355,7 +370,7 @@ def cmd_tests(args) -> None:
             if not passed:
                 print(f'  [!] syntax error in {fname} — review manually')
 
-    print(f'\n[tests] ✓ done — {len(test_cases)} spec file(s) written to {output_dir}')
+    print(f'\n[tests] OK - {len(test_cases)} spec file(s) written to {output_dir}')
 
 
 def _load_page_code(entity: str, output_dir: str) -> str:
@@ -455,6 +470,12 @@ def main() -> None:
         action='store_true',
         default=False,
         help='Use Claude Code CLI instead of Anthropic API (no API key needed)',
+    )
+    tests_p.add_argument(
+        '--dry-run',
+        action='store_true',
+        default=False,
+        help='Skip LLM calls and only generate the prompt text files',
     )
 
     args = parser.parse_args()

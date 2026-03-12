@@ -6,7 +6,7 @@
     "expected": "• Before country=US: State is a disabled INPUT.\n• After typing 'US': a State SELECT dropdown appears (following-sibling XPath).\n• State label shows '*' indicating it is required.",
     "type": "positive",
     "steps": "1. Navigate to Customers and open 'Add Customer' form.\n2. Assert State INPUT is visible and disabled.\n3. Enter 'US' in the Country field.\n4. Assert State SELECT dropdown is visible (XPath: //label[@for='customer-state']/following-sibling::select).\n5. Assert State label text contains '*'.",
-    "entity": "👤 Customers",
+    "entity": "Customer",
     "spec_file": "TC_CUST_01.spec.js"
   },
   {
@@ -16,7 +16,7 @@
     "expected": "• State SELECT is NOT present in the DOM.\n• State INPUT remains visible and disabled.",
     "type": "negative",
     "steps": "1. Navigate to Customers and open 'Add Customer' form.\n2. Enter 'Canada' in the Country field.\n3. Assert State SELECT (data-testid='customer-state-select') is hidden.\n4. Assert State INPUT is visible and disabled.",
-    "entity": "👤 Customers",
+    "entity": "Customer",
     "spec_file": "TC_CUST_02.spec.js"
   },
   {
@@ -26,7 +26,7 @@
     "expected": "• Company Name field is hidden before SMB is selected.\n• After selecting SMB, Company Name group becomes visible.\n• Form submits successfully; company name appears in the customer list.",
     "type": "positive",
     "steps": "1. Navigate to Customers section.\n2. Click 'Add Customer'.\n3. Assert Company Name field is hidden (default type is Consumer).\n4. Select Type = 'SMB'.\n5. Assert Company Name field is now VISIBLE.\n6. Fill Name, Company Name, Email, Country.\n7. Submit the form.\n8. Assert company name appears in the customers table row.",
-    "entity": "👤 Customers",
+    "entity": "Customer",
     "spec_file": "TC_CUST_03.spec.js"
   }
 ]

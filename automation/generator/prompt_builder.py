@@ -142,6 +142,7 @@ RULES:
   • All methods are async
   • Use ONLY BasePage helper methods for waiting and interaction (listed below)
   • Never call page.waitForTimeout or any hardcoded delay
+  ❌ NEVER use plural page class names (e.g. {entity_name}sPage, {entity_name}sPages). ALWAYS use exactly: {entity_name}Page.
 
 {_WAIT_CONSTRAINTS}
 
@@ -238,6 +239,7 @@ FILE STRUCTURE RULES:
   ❌ NEVER shadow the imported class with a same-named variable:
      BAD:  const CustomerPage = new CustomerPage(page)   ← TDZ crash
      GOOD: const customerPage = new CustomerPage(page)   ← camelCase variable
+  Note that CustomerPage is the correct class name.
 
 {_WAIT_CONSTRAINTS}
 
