@@ -43,13 +43,14 @@ _NEGATIVE_KEYWORDS = [
 
 # ── column header aliases ─────────────────────────────────────────────────
 _COL_ALIASES = {
-    'id':       ['id', 'tc id', 'test id', 'test case id', 'tc_id', 'case id'],
-    'name':     ['name', 'title', 'test case', 'test name', 'tc name', 'test_name'],
-    'scenario': ['scenario', 'description', 'test description', 'desc', 'steps to test'],
-    'expected': ['expected', 'expected result', 'expected outcome', 'result', 'expected_result'],
-    'type':     ['type', 'test type', 'positive/negative', 'test_type', 'category'],
-    'steps':    ['steps', 'test steps', 'steps to reproduce', 'test_steps', 'procedure'],
-    'entity':   ['entity', 'page', 'module', 'component', 'feature'],
+    'id':        ['id', 'tc id', 'test id', 'test case id', 'tc_id', 'case id', 'suite id', 'suite_id'],
+    'name':      ['name', 'title', 'test case', 'test name', 'tc name', 'test_name', 'test case name', 'testcase name'],
+    'scenario':  ['scenario', 'description', 'test description', 'desc', 'steps to test', 'scenario description'],
+    'expected':  ['expected', 'expected result', 'expected outcome', 'result', 'expected_result'],
+    'type':      ['type', 'test type', 'positive/negative', 'test_type', 'category'],
+    'steps':     ['steps', 'test steps', 'steps to reproduce', 'test_steps', 'procedure'],
+    'entity':    ['entity', 'page', 'module', 'component', 'feature'],
+    'spec_file': ['spec file', 'spec_file', 'spec', 'filename', 'file name', 'output file'],
 }
 
 
@@ -107,22 +108,24 @@ def _row_to_dict(raw: dict, header_map: dict[str, str], row_num: int) -> dict:
         mapped.get('name', ''), mapped.get('scenario', ''), mapped.get('expected', '')
     ]))
 
-    tc_id    = mapped.get('id') or f'TC-{row_num:03d}'
-    name     = mapped.get('name') or tc_id
-    scenario = mapped.get('scenario') or ''
-    expected = mapped.get('expected') or ''
-    tc_type  = _normalise_type(mapped.get('type', '')) if mapped.get('type') else _infer_type(combined_text)
-    steps    = mapped.get('steps', '')
-    entity   = mapped.get('entity', '') or _infer_entity(combined_text)
+    tc_id     = mapped.get('id') or f'TC-{row_num:03d}'
+    name      = mapped.get('name') or tc_id
+    scenario  = mapped.get('scenario') or ''
+    expected  = mapped.get('expected') or ''
+    tc_type   = _normalise_type(mapped.get('type', '')) if mapped.get('type') else _infer_type(combined_text)
+    steps     = mapped.get('steps', '')
+    entity    = mapped.get('entity', '') or _infer_entity(combined_text)
+    spec_file = mapped.get('spec_file', '')
 
     return {
-        'id':       tc_id,
-        'name':     name,
-        'scenario': scenario,
-        'expected': expected,
-        'type':     tc_type,
-        'steps':    steps,
-        'entity':   entity,
+        'id':        tc_id,
+        'name':      name,
+        'scenario':  scenario,
+        'expected':  expected,
+        'type':      tc_type,
+        'steps':     steps,
+        'entity':    entity,
+        'spec_file': spec_file,
     }
 
 
@@ -131,7 +134,11 @@ def _row_to_dict(raw: dict, header_map: dict[str, str], row_num: int) -> dict:
 # ══════════════════════════════════════════════════════════════════════════
 
 def parse_excel(path: str) -> list[dict]:
-    """Parse .xlsx/.xls — reads first sheet."""
+    """Parse .xlsx/.xls — reads first sheet.
+
+    Skips leading title/banner rows and locates the real header row by finding
+    the first row where at least one cell matches a known column alias.
+    """
     try:
         import openpyxl
     except ImportError:
@@ -144,16 +151,29 @@ def parse_excel(path: str) -> list[dict]:
     if not rows:
         return []
 
-    raw_headers = [str(h).strip() if h is not None else '' for h in rows[0]]
-    header_map  = _normalise_headers(raw_headers)
+    # Find the first row that contains recognised column headers
+    header_row_idx = None
+    header_map = {}
+    for idx, row in enumerate(rows):
+        candidate = [str(h).strip() if h is not None else '' for h in row]
+        mapping = _normalise_headers(candidate)
+        if mapping:
+            header_row_idx = idx
+            raw_headers = candidate
+            header_map = mapping
+            break
+
+    if header_row_idx is None:
+        return []
 
     result = []
-    for i, row in enumerate(rows[1:], start=2):
+    for i, row in enumerate(rows[header_row_idx + 1:], start=1):
         raw = dict(zip(raw_headers, [str(c).strip() if c is not None else '' for c in row]))
-        # skip completely empty rows
-        if not any(raw.values()):
+        # skip completely empty rows and section-divider rows (only one non-empty cell)
+        non_empty = [v for v in raw.values() if v]
+        if len(non_empty) <= 1:
             continue
-        result.append(_row_to_dict(raw, header_map, i - 1))
+        result.append(_row_to_dict(raw, header_map, i))
 
     wb.close()
     return result
@@ -162,20 +182,45 @@ def parse_excel(path: str) -> list[dict]:
 def parse_csv(source: str) -> list[dict]:
     """
     Parse CSV from a file path or a multi-line CSV string.
+    Falls back to cp1252 (Windows) encoding if UTF-8 decoding fails.
     """
     if os.path.isfile(source):
-        with open(source, newline='', encoding='utf-8') as f:
-            text = f.read()
+        for enc in ('utf-8-sig', 'utf-8', 'cp1252', 'latin-1'):
+            try:
+                with open(source, newline='', encoding=enc) as f:
+                    text = f.read()
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            raise ValueError(f'Cannot decode CSV file: {source}')
     else:
         text = source
 
-    reader = csv.DictReader(io.StringIO(text))
-    headers = reader.fieldnames or []
-    header_map = _normalise_headers(list(headers))
+    # Scan rows to find the first line where at least one cell matches a known alias
+    # (handles title/banner rows before the real header)
+    lines = list(csv.reader(io.StringIO(text)))
+    header_row_idx = None
+    header_map: dict[str, str] = {}
+    raw_headers: list[str] = []
+    for idx, line in enumerate(lines):
+        candidate = [c.strip() for c in line]
+        mapping = _normalise_headers(candidate)
+        if mapping:
+            header_row_idx = idx
+            raw_headers = candidate
+            header_map = mapping
+            break
+
+    if header_row_idx is None:
+        return []
 
     result = []
-    for i, row in enumerate(reader, start=1):
-        result.append(_row_to_dict(dict(row), header_map, i))
+    for i, line in enumerate(lines[header_row_idx + 1:], start=1):
+        if not any(c.strip() for c in line):
+            continue
+        row = dict(zip(raw_headers, [c.strip() for c in line]))
+        result.append(_row_to_dict(row, header_map, i))
     return result
 
 
@@ -205,13 +250,14 @@ def parse_json(source: str) -> list[dict]:
         entity   = str(item.get('entity', '') or item.get('page', '')) or _infer_entity(f'{name} {scenario}')
 
         result.append({
-            'id':       tc_id,
-            'name':     name,
-            'scenario': scenario,
-            'expected': expected,
-            'type':     tc_type,
-            'steps':    steps,
-            'entity':   entity,
+            'id':        tc_id,
+            'name':      name,
+            'scenario':  scenario,
+            'expected':  expected,
+            'type':      tc_type,
+            'steps':     steps,
+            'entity':    entity,
+            'spec_file': str(item.get('spec_file', '') or ''),
         })
     return result
 

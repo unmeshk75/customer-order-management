@@ -1,12 +1,23 @@
 const { defineConfig, devices } = require('@playwright/test');
 
-const CHROME_PATH = process.env.CHROME_PATH || 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe';
-
+/**
+ * Scoped config for automation/e2e-generated/.
+ *
+ * Used when running a single generated spec from inside this directory:
+ *   cd automation/e2e-generated/tests
+ *   npx playwright test TC_CUST_03.spec.js
+ *
+ * Playwright walks up parent directories looking for a config file, so it
+ * finds this file when invoked from the tests/ sub-directory.
+ *
+ * testDir is set to ./tests so only generated specs are in scope — the
+ * e2e-sample and other suites are excluded.
+ */
 module.exports = defineConfig({
-  testDir: '.',
+  testDir: './tests',
   timeout: 30 * 1000,
   expect: {
-    timeout: 5000
+    timeout: 5000,
   },
   fullyParallel: false,
   forbidOnly: !!process.env.CI,

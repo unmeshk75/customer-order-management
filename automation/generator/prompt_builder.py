@@ -72,6 +72,7 @@ def build_locator_prompt(entity_name: str, manifest_subset: dict) -> tuple[str, 
 
     system = f"""You are an expert Playwright test automation engineer.
 Generate a single JavaScript ES module file: {entity_name}Locators.js
+Do not overthink. Output the file directly without any reasoning or analysis preamble.
 
 RULES:
   • Export one class named {entity_name}Locators
@@ -129,6 +130,7 @@ def build_page_prompt(entity_name: str, locator_code: str) -> tuple[str, str]:
 
     system = f"""You are an expert Playwright test automation engineer.
 Generate a single JavaScript ES module file: {entity_name}Page.js
+Do not overthink. Output the file directly without any reasoning or analysis preamble.
 
 RULES:
   • Export one class named {entity_name}Page extends BasePage
@@ -217,17 +219,25 @@ def build_test_prompt(
 
     system = f"""You are an expert Playwright test automation engineer.
 Generate a single Playwright test spec file.
+Do not overthink. Output the file directly without any reasoning or analysis preamble.
+
+CRITICAL — EXACT IMPORTS (copy these verbatim, do NOT change class names or paths):
+  import {{ test, expect }} from '@playwright/test';
+  import {{ {page_class} }} from '{page_import}';
+  import {{ ApiHelper }} from '../utils/ApiHelper.js';
+  ❌ NEVER use plural or variant names (e.g. {entity_name}sPage, {entity_name}s).
+  ✅ The page class is ALWAYS named exactly: {page_class}
 
 FILE STRUCTURE RULES:
   • ES module imports only
-  • Import {{ test, expect }} from '@playwright/test'
-  • Import {{ {page_class} }} from '{page_import}'
-  • Import {{ ApiHelper }} from '../utils/ApiHelper.js'
   • One test.describe block per test case group
   • test.beforeAll: use ApiHelper to seed required data via API
   • test.afterAll: use ApiHelper to clean up all seeded data
   • Individual tests: [Positive] or [Negative] prefix in test name
   • Each test is independent: navigate fresh, interact, assert, clean up
+  ❌ NEVER shadow the imported class with a same-named variable:
+     BAD:  const CustomerPage = new CustomerPage(page)   ← TDZ crash
+     GOOD: const customerPage = new CustomerPage(page)   ← camelCase variable
 
 {_WAIT_CONSTRAINTS}
 
@@ -246,6 +256,11 @@ OUTPUT: Return ONLY the raw JavaScript file content. No markdown, no explanation
     tc_json = json.dumps(test_cases, indent=2)
 
     user = f"""Generate a Playwright spec file for the following test cases.
+
+REMINDER — use these exact imports at the top of the file:
+  import {{ test, expect }} from '@playwright/test';
+  import {{ {page_class} }} from '{page_import}';
+  import {{ ApiHelper }} from '../utils/ApiHelper.js';
 
 === TEST CASES ===
 {tc_json}

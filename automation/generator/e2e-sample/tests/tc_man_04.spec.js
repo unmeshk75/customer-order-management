@@ -93,12 +93,20 @@ test.describe('TC-MAN-04: Consumer Customer — Product Type Restrictions', () =
   test('[Positive] Consumer can create an order with a Basic product', async ({ page }) => {
     const orderPage = new OrderPage(page);
     await orderPage.navigateToOrders();
+    await orderPage.openCreateForm();
 
-    await orderPage.createOrder({
-      customerName:  `${customer.name} (Consumer)`,
-      productLabel:  `${basic.name} (Basic)`,
-      seats:         2,
-    });
+    // Step 1 — select by id to avoid label mismatch
+    await orderPage.selectCustomerById(customer.id);
+    await orderPage.goToStep2();
+
+    // Step 2 — select by product id value to avoid "$price/seat" suffix mismatch
+    await orderPage.selectByValue(orderPage.loc.orderProductSelect(0), String(basic.id));
+    await orderPage.setSeats(0, 2);
+    await orderPage.goToReviewStep(false);
+
+    // Step 3 — submit
+    await orderPage.clickWhenReady(orderPage.loc.wizardSubmit);
+    await orderPage.waitForVisible(orderPage.loc.orderListContainer);
 
     // XPath assertion: order row contains the customer name
     const customerCell = page.locator(

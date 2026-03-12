@@ -93,12 +93,20 @@ test.describe('TC-MAN-05: SMB Customer — Product Type Restrictions', () => {
   test('[Positive] SMB can create an order with a Teams product', async ({ page }) => {
     const orderPage = new OrderPage(page);
     await orderPage.navigateToOrders();
+    await orderPage.openCreateForm();
 
-    await orderPage.createOrder({
-      customerName:  `${customer.name} (SMB)`,
-      productLabel:  `${teams.name} (Teams)`,
-      seats:         1,
-    });
+    // Step 1 — select by id to avoid "— CompanyName" suffix mismatch for SMB
+    await orderPage.selectCustomerById(customer.id);
+    await orderPage.goToStep2();
+
+    // Step 2 — select by product id value to avoid "$price/seat" suffix mismatch
+    await orderPage.selectByValue(orderPage.loc.orderProductSelect(0), String(teams.id));
+    await orderPage.setSeats(0, 1);
+    await orderPage.goToReviewStep(false);
+
+    // Step 3 — submit
+    await orderPage.clickWhenReady(orderPage.loc.wizardSubmit);
+    await orderPage.waitForVisible(orderPage.loc.orderListContainer);
 
     // XPath assertion: order row contains the SMB customer name
     const customerCell = page.locator(

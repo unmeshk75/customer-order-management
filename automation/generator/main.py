@@ -26,6 +26,7 @@ Usage (from automation/generator/ with venv active):
 """
 
 import argparse
+import json
 import os
 import sys
 
@@ -133,11 +134,61 @@ def _generate_pages(
     return generated
 
 
+_SCOPED_PLAYWRIGHT_CONFIG = """\
+const { defineConfig, devices } = require('@playwright/test');
+
+/**
+ * Scoped config for automation/e2e-generated/.
+ *
+ * Used when running a single generated spec from inside this directory:
+ *   cd automation/e2e-generated/tests
+ *   npx playwright test TC_CUST_03.spec.js
+ *
+ * Playwright walks up parent directories looking for a config file, so it
+ * finds this file when invoked from the tests/ sub-directory.
+ *
+ * testDir is set to ./tests so only generated specs are in scope — the
+ * e2e-sample and other suites are excluded.
+ */
+module.exports = defineConfig({
+  testDir: './tests',
+  timeout: 30 * 1000,
+  expect: {
+    timeout: 5000,
+  },
+  fullyParallel: false,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: 1,
+  reporter: 'html',
+  use: {
+    actionTimeout: 0,
+    baseURL: process.env.FRONTEND_URL || 'http://localhost:5173',
+    trace: 'on-first-retry',
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: 'chrome',
+      },
+    },
+  ],
+});
+"""
+
+
 def _write_static_files(output_dir: str) -> None:
-    """Copy BasePage.js and ApiHelper.js from reference."""
+    """Copy BasePage.js and ApiHelper.js from reference; write scoped Playwright config."""
     # BasePage.js and ApiHelper.js — copy verbatim from reference e2e/
     writer.copy_reference_file('pages/BasePage.js', output_dir)
     writer.copy_reference_file('utils/ApiHelper.js', output_dir)
+    # Scoped playwright config — allows running single specs from e2e-generated/tests/
+    config_path = os.path.join(output_dir, 'playwright.config.cjs')
+    with open(config_path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(_SCOPED_PLAYWRIGHT_CONFIG)
+    print(f'  [write] {config_path}')
 
 
 def _write_barrel(output_dir: str) -> None:
@@ -187,19 +238,77 @@ def cmd_e2e(args) -> None:
 # Pipeline B — generate tests from input
 # ══════════════════════════════════════════════════════════════════════════
 
+def _fix_page_imports(code: str, entity: str) -> str:
+    """
+    Correct two common LLM mistakes:
+    1. Pluralised page class name:  CustomersPage → CustomerPage
+    2. Shadowed variable name:      const CustomerPage = new CustomerPage(page)
+                                 →  const customerPage = new CustomerPage(page)
+    """
+    import re as _re
+
+    # Fix 1: pluralised class name in import/usage
+    wrong_class = f'{entity}sPage'
+    right_class = f'{entity}Page'
+    if wrong_class in code:
+        print(f'  [fix]  corrected pluralised class: {wrong_class} → {right_class}')
+        code = code.replace(wrong_class, right_class)
+
+    # Fix 2: variable shadows imported class  →  lowercase the variable
+    # Matches:  const CustomerPage = new CustomerPage(   (const/let/var)
+    shadow_pattern = _re.compile(
+        rf'\b(const|let|var)\s+({right_class})\s*=\s*new\s+{right_class}\s*\('
+    )
+    if shadow_pattern.search(code):
+        var_name = right_class[0].lower() + right_class[1:]  # CustomerPage → customerPage
+        print(f'  [fix]  corrected shadowed variable: {right_class} → {var_name}')
+        # Replace variable declarations first
+        code = shadow_pattern.sub(
+            lambda m: f'{m.group(1)} {var_name} = new {right_class}(', code
+        )
+        # Replace all subsequent usages of the variable (not the class in import lines)
+        # Only replace  <PageClass>.method  that appear after "= new PageClass(" context
+        # Use a line-by-line approach: skip import lines
+        lines = []
+        for line in code.splitlines():
+            if line.strip().startswith('import ') and right_class in line:
+                lines.append(line)
+            else:
+                lines.append(line.replace(f'{right_class}.', f'{var_name}.'))
+        code = '\n'.join(lines)
+
+    return code
+
+
 def cmd_tests(args) -> None:
     output_dir = os.path.abspath(args.output)
     os.makedirs(output_dir, exist_ok=True)
 
-    print(f'\n[tests] input:  {args.input}')
     print(f'[tests] output: {output_dir}')
 
-    # Parse test cases
-    test_cases = input_parser.parse(args.input, args.type or '')
-    if not test_cases:
-        print('[tests] no test cases parsed — check your input')
-        return
-    print(f'[tests] parsed {len(test_cases)} test case(s)')
+    # Load from staging file or parse fresh input
+    if args.from_staging:
+        staging_path = os.path.abspath(args.from_staging)
+        print(f'[tests] loading from staging file: {staging_path}')
+        with open(staging_path, encoding='utf-8') as f:
+            test_cases = json.load(f)
+        print(f'[tests] loaded {len(test_cases)} test case(s) from staging')
+    else:
+        if not args.input:
+            print('[tests] error: --input or --from-staging is required')
+            return
+        print(f'[tests] input:  {args.input}')
+        test_cases = input_parser.parse(args.input, args.type or '')
+        if not test_cases:
+            print('[tests] no test cases parsed — check your input')
+            return
+        print(f'[tests] parsed {len(test_cases)} test case(s)')
+
+        # Save intermediary JSON before generation so it can be reviewed / re-used
+        staging_path = os.path.join(output_dir, 'parsed_test_cases.json')
+        with open(staging_path, 'w', encoding='utf-8') as f:
+            json.dump(test_cases, f, indent=2, ensure_ascii=False)
+        print(f'[tests] staging file saved → {staging_path}')
 
     # Load manifest (for validation)
     try:
@@ -211,7 +320,7 @@ def cmd_tests(args) -> None:
 
     client = create_client(use_sdk=args.sdk)
 
-    # Group by entity
+    # Group by entity, then by spec file within each entity
     groups = input_parser.group_by_entity(test_cases)
 
     for entity, tcs in groups.items():
@@ -220,11 +329,22 @@ def cmd_tests(args) -> None:
         # Load page object for context
         page_code = _load_page_code(entity, output_dir)
 
+        # Sub-group by spec_file; TCs without one get their own file each
+        spec_groups: dict[str, list[dict]] = {}
         for tc in tcs:
-            system, user = prompt_builder.build_test_prompt([tc], entity, page_code)
-            code = client.generate(system, user, label=f'{tc["id"]} — {tc["name"]}')
+            key = tc.get('spec_file', '').strip() or writer.tc_filename(tc['id'])
+            spec_groups.setdefault(key, []).append(tc)
 
-            fname    = writer.tc_filename(tc['id'])
+        for fname, group_tcs in spec_groups.items():
+            ids_label = ', '.join(t['id'] for t in group_tcs)
+            print(f'  → {fname}  ({len(group_tcs)} tc: {ids_label})')
+
+            system, user = prompt_builder.build_test_prompt(group_tcs, entity, page_code)
+            code = client.generate(system, user, label=fname)
+
+            # Fix LLM hallucination: pluralised page class/import names
+            code = _fix_page_imports(code, entity)
+
             out_path = os.path.join(output_dir, fname)
             writer.write_file(out_path, code)
 
@@ -300,13 +420,23 @@ def main() -> None:
     )
     tests_p.add_argument(
         '--input', '-i',
-        required=True,
+        required=False,
+        default=None,
         help=(
             'Input source:\n'
             '  path/to/test_cases.xlsx\n'
             '  path/to/test_cases.csv\n'
             '  \'{"id":"TC-01","name":"...","scenario":"...","expected":"...","type":"positive"}\'\n'
             '  "TC-01: Customer creation with valid data"'
+        ),
+    )
+    tests_p.add_argument(
+        '--from-staging',
+        metavar='FILE',
+        default=None,
+        help=(
+            'Skip parsing and load test cases directly from a previously saved\n'
+            'parsed_test_cases.json staging file (e.g. after manual review/edits).'
         ),
     )
     tests_p.add_argument(
