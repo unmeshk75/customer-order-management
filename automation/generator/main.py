@@ -12,14 +12,17 @@ Backend flags (add to any subcommand):
           Default: Anthropic API (requires ANTHROPIC_API_KEY in .env)
 
 Usage (from automation/generator/ with venv active):
-  python main.py e2e
-  python main.py e2e --sdk
+  python main.py e2e                                       # Anthropic API (default)
+  python main.py e2e --provider sdk                        # Claude Code CLI
+  python main.py e2e --provider gemini                     # Google Gemini API
+  python main.py e2e --provider vertexai                   # Google Vertex AI
   python main.py e2e --only locators
   python main.py e2e --only pages
   python main.py e2e --output ../e2e-generated
+  python main.py e2e --src /path/to/other-react-app/src   # any React app
 
   python main.py tests --input test_cases.xlsx
-  python main.py tests --input test_cases.xlsx --sdk
+  python main.py tests --input test_cases.xlsx --provider gemini
   python main.py tests --input "TC-01: Customer can be created" --type positive
   python main.py tests --output ../e2e-generated/tests
 ────────────────────────────────────────────────────────────────────────────
@@ -41,16 +44,10 @@ import input_parser
 import prompt_builder
 import validator
 import writer
-from llm_client import create_client, LLMClient, SDKClient
+from llm_client import create_client, LLMClient, SDKClient, GeminiClient, VertexAIClient
 
 _HERE   = os.path.dirname(os.path.abspath(__file__))
 _E2E_REF = os.path.normpath(os.path.join(_HERE, 'e2e-sample'))
-
-# ── entity configuration ──────────────────────────────────────────────────
-ENTITIES = ['Customer', 'Product', 'Order', 'Dashboard', 'Navigation', 'Modal']
-
-# Entities that get a Page object generated (Navigation and Modal are locator-only)
-PAGE_ENTITIES = ['Customer', 'Product', 'Order', 'Dashboard']
 
 # Static files to copy verbatim from reference e2e/
 STATIC_COPIES = [
@@ -65,14 +62,19 @@ STATIC_COPIES = [
 # Pipeline A helpers
 # ══════════════════════════════════════════════════════════════════════════
 
-def _generate_locators(client: LLMClient | SDKClient, manifest: dict, output_dir: str) -> dict[str, str]:
+def _generate_locators(
+    client: LLMClient | SDKClient,
+    manifest: dict,
+    output_dir: str,
+    entities: list[str],
+) -> dict[str, str]:
     """
     Generate all *Locators.js files.
     Returns {entity_name: generated_code} for use by page generation step.
     """
     generated: dict[str, str] = {}
 
-    for entity in ENTITIES:
+    for entity in entities:
         subset = extractor.get_entity_entries(manifest, entity.lower())
         if not subset:
             print(f'  [locators] skipping {entity} — no manifest entries')
@@ -100,6 +102,7 @@ def _generate_pages(
     locator_map: dict[str, str],
     output_dir: str,
     manifest: dict,
+    page_entities: list[str],
 ) -> dict[str, str]:
     """
     Generate all *Page.js files.
@@ -107,7 +110,7 @@ def _generate_pages(
     """
     generated: dict[str, str] = {}
 
-    for entity in PAGE_ENTITIES:
+    for entity in page_entities:
         if entity not in locator_map:
             # Try to read from output dir if locators were generated in a previous run]
             loc_path = os.path.join(output_dir, 'locators', f'{entity}Locators.js')
@@ -192,11 +195,31 @@ def _write_static_files(output_dir: str) -> None:
     print(f'  [write] {config_path}')
 
 
-def _write_barrel(output_dir: str) -> None:
+def _write_barrel(output_dir: str, entities: list[str]) -> None:
     """Write locators.js barrel re-export."""
     barrel_path = os.path.join(output_dir, 'locators.js')
-    content = prompt_builder.build_barrel_content(ENTITIES)
+    content = prompt_builder.build_barrel_content(entities)
     writer.write_file(barrel_path, content)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Provider resolution
+# ══════════════════════════════════════════════════════════════════════════
+
+def _resolve_provider(args) -> str:
+    """
+    Derive the provider string from parsed CLI args.
+
+    Priority:
+      1. --provider <name>   (explicit, wins over everything)
+      2. --sdk               (legacy flag, maps to 'sdk')
+      3. default             'anthropic'
+    """
+    if getattr(args, 'provider', None):
+        return args.provider
+    if getattr(args, 'sdk', False):
+        return 'sdk'
+    return 'anthropic'
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -206,31 +229,43 @@ def _write_barrel(output_dir: str) -> None:
 def cmd_e2e(args) -> None:
     output_dir = os.path.abspath(args.output)
     only       = args.only  # None | 'locators' | 'pages'
+    src_dir    = os.path.abspath(args.src)
 
     print(f'\n[e2e] output directory: {output_dir}')
+    print(f'[e2e] frontend src:     {src_dir}')
     writer.scaffold_output_dir(output_dir)
 
-    client = create_client(use_sdk=args.sdk)
+    client = create_client(provider=_resolve_provider(args))
 
     # Step 1: extract selectors
-    print('\n[e2e] step 1 — extracting selectors from JSX...')
-    manifest = extractor.extract()
+    print('\n[e2e] step 1 — extracting selectors from JSX/TSX...')
+    manifest = extractor.extract(src_dir)
     print(f'[e2e] {len(manifest)} selectors extracted')
+
+    if not manifest:
+        print('[e2e] ERROR: no selectors found — check that --src points to the React app src/ directory')
+        return
+
+    # Derive entity lists from the actual manifest (works for any React app)
+    entities      = extractor.get_all_entities(manifest)
+    page_entities = extractor.get_page_entities(manifest)
+    print(f'[e2e] detected entities:      {entities}')
+    print(f'[e2e] page-object entities:   {page_entities}')
 
     if only == 'locators' or only is None:
         print('\n[e2e] step 2 — generating locator files...')
-        locator_map = _generate_locators(client, manifest, output_dir)
+        locator_map = _generate_locators(client, manifest, output_dir, entities)
     else:
         locator_map = {}
 
     if only == 'pages' or only is None:
         print('\n[e2e] step 3 — generating page object files...')
-        _generate_pages(client, locator_map, output_dir, manifest)
+        _generate_pages(client, locator_map, output_dir, manifest, page_entities)
 
     if only is None:
         print('\n[e2e] step 4 — writing static / copied files...')
         _write_static_files(output_dir)
-        _write_barrel(output_dir)
+        _write_barrel(output_dir, entities)
 
     print(f'\n[e2e] ✓ done — output: {output_dir}')
 
@@ -322,7 +357,7 @@ def cmd_tests(args) -> None:
     if getattr(args, 'dry_run', False):
         client = None
     else:
-        client = create_client(use_sdk=args.sdk)
+        client = create_client(provider=_resolve_provider(args))
 
     # Group by entity, then by spec file within each entity
     groups = input_parser.group_by_entity(test_cases)
@@ -416,16 +451,36 @@ def main() -> None:
         help='Output directory (default: automation/e2e-generated/)',
     )
     e2e_p.add_argument(
+        '--src', '-s',
+        default=extractor.DEFAULT_SRC,
+        help=(
+            'Path to the React app src/ directory containing .jsx/.tsx files\n'
+            f'(default: {extractor.DEFAULT_SRC})'
+        ),
+    )
+    e2e_p.add_argument(
         '--only',
         choices=['locators', 'pages'],
         default=None,
         help='Generate only locators or only pages (default: both)',
     )
     e2e_p.add_argument(
+        '--provider', '-p',
+        choices=['anthropic', 'sdk', 'gemini', 'vertexai'],
+        default=None,
+        help=(
+            'LLM provider to use (default: anthropic):\n'
+            '  anthropic — Anthropic API        (needs ANTHROPIC_API_KEY in .env)\n'
+            '  sdk       — Claude Code CLI      (needs `claude` on PATH)\n'
+            '  gemini    — Google Gemini API    (needs GEMINI_API_KEY in .env)\n'
+            '  vertexai  — Google Vertex AI     (needs GCP_CREDENTIALS_PATH, GCP_PROJECT in .env)'
+        ),
+    )
+    e2e_p.add_argument(
         '--sdk',
         action='store_true',
         default=False,
-        help='Use Claude Code CLI instead of Anthropic API (no API key needed)',
+        help='[legacy] Alias for --provider sdk',
     )
 
     # ── tests subcommand ──────────────────────────────────────────────────
@@ -466,10 +521,22 @@ def main() -> None:
         help='Output directory for test specs (default: automation/e2e-generated/tests/)',
     )
     tests_p.add_argument(
+        '--provider', '-p',
+        choices=['anthropic', 'sdk', 'gemini', 'vertexai'],
+        default=None,
+        help=(
+            'LLM provider to use (default: anthropic):\n'
+            '  anthropic — Anthropic API        (needs ANTHROPIC_API_KEY in .env)\n'
+            '  sdk       — Claude Code CLI      (needs `claude` on PATH)\n'
+            '  gemini    — Google Gemini API    (needs GEMINI_API_KEY in .env)\n'
+            '  vertexai  — Google Vertex AI     (needs GCP_CREDENTIALS_PATH, GCP_PROJECT in .env)'
+        ),
+    )
+    tests_p.add_argument(
         '--sdk',
         action='store_true',
         default=False,
-        help='Use Claude Code CLI instead of Anthropic API (no API key needed)',
+        help='[legacy] Alias for --provider sdk',
     )
     tests_p.add_argument(
         '--dry-run',

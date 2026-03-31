@@ -2,37 +2,30 @@ import { test, expect } from '@playwright/test';
 import { CustomerPage } from '../pages/CustomerPage.js';
 import { ApiHelper } from '../utils/ApiHelper.js';
 
-test.describe('TC-CUST_01-TC02: [Negative] Non-US country keeps State as disabled input', () => {
-
-  test.beforeAll(async ({ request }) => {
-    const api = new ApiHelper(request);
-    await api.cleanupCustomersByName('TC02');
-  });
-
-  test.afterAll(async ({ request }) => {
-    const api = new ApiHelper(request);
-    await api.cleanupCustomersByName('TC02');
-  });
+test.describe('TC-CUST-01-TC02: [Negative] Non-US country keeps State as disabled input', () => {
 
   test('[Negative] Non-US country keeps State as disabled input', async ({ page }) => {
     const customerPage = new CustomerPage(page);
+
+    // 1. Navigate to Customers and open 'Add Customer' form
     await customerPage.navigateToCustomers();
     await customerPage.openCreateForm();
 
-    // Enter a non-US country
+    // 2. Enter 'Canada' in the Country field
     await customerPage.loc.countryInput.fill('Canada');
     await customerPage.loc.countryInput.blur();
 
-    // Wait for stateInput to be visible (non-US branch)
-    await customerPage.loc.stateInput.waitFor({ state: 'visible' });
+    // Wait for the state input to appear (non-US branch)
+    await customerPage.waitForVisible(customerPage.loc.stateInput);
 
-    // Assert State SELECT is NOT present / not visible
+    // 3. Assert State SELECT (data-testid='customer-state-select') is NOT present / hidden
     await expect(customerPage.loc.stateSelect).not.toBeVisible();
 
-    // Assert State INPUT is visible and disabled
+    // 4. Assert State INPUT is visible and disabled
     await expect(customerPage.loc.stateInput).toBeVisible();
     await expect(customerPage.loc.stateInput).toBeDisabled();
 
+    // Clean up — cancel the form
     await customerPage.cancelForm();
   });
 

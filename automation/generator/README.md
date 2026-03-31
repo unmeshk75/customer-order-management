@@ -1,160 +1,201 @@
 # LLM Test Generator
 
-A CLI tool that uses Claude (via the Anthropic API or Claude Code CLI) to generate Playwright locators, page objects, and test specs directly from the React source code.
+CLI tool that generates Playwright locator classes, page objects, and test specs from a React app's source code — using Claude, Gemini, or Vertex AI.
 
 ## How It Works
 
-```txt
-JSX components
-     │
-     ▼
-extractor.py  ──→  selector_manifest.json   (extracted data-testid / id values)
-     │
-     ▼
-prompt_builder.py  ──→  system + user prompt  (with manifest + reference examples)
-     │
-     ▼
-llm_client.py  ──→  Claude API / claude CLI   (generates JS code)
-     │
-     ▼
-writer.py  ──→  e2e-generated/               (cleans output, writes files)
-     │
-     ▼
-validator.py  ──→  syntax check              (reports JS errors)
+```
+JSX / TSX source
+      │
+      ▼
+extractor.py  ──→  selector_manifest.json   (all data-testid / id values)
+      │
+      ▼
+prompt_builder.py  ──→  system + user prompt
+      │                  (manifest + reference examples from e2e-sample/)
+      ▼
+llm_client.py  ──→  chosen LLM provider    (streaming output)
+      │
+      ▼
+writer.py  ──→  e2e-generated/             (writes JS files)
+      │
+      ▼
+validator.py  ──→  node --check            (syntax validation)
 ```
 
 ## Setup
 
-### Option A — Anthropic API key
+### 1. Activate the shared Python venv
+
+```bash
+# From the project root
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Mac / Linux
+```
+
+### 2. Configure your LLM provider
+
+Copy `.env.example` to `.env` and fill in the keys for the provider(s) you want to use:
 
 ```bash
 cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-### Option B — Claude Code CLI (no API key needed)
+| Provider | Required `.env` keys |
+|---|---|
+| Anthropic (default) | `ANTHROPIC_API_KEY` |
+| Claude Code CLI | *(no key — uses your Claude Code subscription)* |
+| Google Gemini API | `GEMINI_API_KEY` |
+| Google Vertex AI | `GCP_CREDENTIALS_PATH`, `GCP_PROJECT` |
 
-Uses your Claude Code subscription. Requires `claude` on PATH:
+**Vertex AI:** place your GCP service account JSON file in this directory (`automation/generator/`) and set `GCP_CREDENTIALS_PATH` to its filename (e.g. `gcp_credential_2026.json`). The path is resolved relative to this directory, so just the filename is enough.
 
+**Claude Code CLI:** install the CLI globally — no API key needed:
 ```bash
 npm install -g @anthropic-ai/claude-code
 claude --version   # verify
 ```
 
-Then pass `--sdk` to any command below.
-
-**Activate the shared Python venv first:**
-
+**Optional Python packages** (install only what you need):
 ```bash
-# From project root
-venv/Scripts/activate        # Windows
-# source venv/bin/activate   # Mac/Linux
+pip install google-generativeai          # Gemini API
+pip install google-cloud-aiplatform      # Vertex AI
+pip install google-auth                  # Vertex AI service account auth
 ```
 
 ## CLI Reference
 
-All commands run from `automation/generator/`:
+All commands run from this directory (`automation/generator/`):
 
 ```bash
 cd automation/generator
 ```
 
-### Generate e2e infrastructure (`e2e` subcommand)
+### `e2e` — generate locators, page objects, and static files
 
 ```bash
-# Full generation: locators + pages + static files → e2e-generated/
+# Full generation (locators + pages + static files) → automation/e2e-generated/
 python main.py e2e
-python main.py e2e --sdk                  # use Claude Code CLI
 
-# Only locators (fastest, run after UI changes)
-python main.py e2e --only locators
-python main.py e2e --only locators --sdk
+# Choose provider
+python main.py e2e --provider anthropic    # default — Anthropic API
+python main.py e2e --provider sdk          # Claude Code CLI, no API key
+python main.py e2e --provider gemini       # Google Gemini API
+python main.py e2e --provider vertexai     # Google Vertex AI
 
-# Only page objects (reads existing locators from e2e-generated/)
-python main.py e2e --only pages
-python main.py e2e --only pages --sdk
+# Generate only one layer
+python main.py e2e --only locators         # steps 1–2 only (fastest after UI changes)
+python main.py e2e --only pages            # step 3 only (reads existing locators)
+
+# Point at a different React app
+python main.py e2e --src /path/to/my-app/src
 
 # Custom output directory
 python main.py e2e --output ../some-dir
 ```
 
-### Generate test specs (`tests` subcommand)
+> `--only pages` reads locators already in the output directory. Run `--only locators` first if they do not exist.
+
+### `tests` — generate spec files from test case input
 
 ```bash
 # From an Excel or CSV file
 python main.py tests --input test_cases.xlsx
-python main.py tests --input test_cases.csv --sdk
+python main.py tests --input test_cases.csv --provider gemini
 
-# From a JSON test case object
+# From an inline JSON test case object
 python main.py tests --input '{"id":"TC-01","name":"Customer creation","scenario":"...","expected":"...","type":"positive"}'
 
-# From a plain text description (type is auto-inferred)
+# From a plain text description (type auto-inferred; override with --type)
 python main.py tests --input "TC-01: Customer can be created with valid data"
 python main.py tests --input "TC-01: ..." --type positive
 
-# Custom output directory for specs
+# Re-use a previously parsed staging file (skip parsing, skip LLM)
+python main.py tests --from-staging parsed_test_cases.json
+
+# Dry run — generate prompt files only, no LLM calls
+python main.py tests --input cases.xlsx --dry-run
+
+# Custom output directory
 python main.py tests --input cases.xlsx --output ../e2e-generated/tests
 ```
 
-### Flags summary
+### All flags
 
-| Flag | Applies to | Description |
-| --- | --- | --- |
-| `--sdk` | both | Use `claude` CLI instead of Anthropic API |
-| `--only locators\|pages` | `e2e` | Generate only one layer |
-| `--output PATH` | both | Override output directory |
-| `--input SOURCE` | `tests` | Required — file path or inline text/JSON |
+| Flag | Subcommand | Description |
+|---|---|---|
+| `--provider` / `-p` | both | `anthropic` (default) / `sdk` / `gemini` / `vertexai` |
+| `--sdk` | both | Legacy alias for `--provider sdk` |
+| `--src` / `-s` | `e2e` | Path to React app `src/` directory (default: `../../frontend/src`) |
+| `--only locators\|pages` | `e2e` | Generate only locators or only pages |
+| `--output` / `-o` | both | Override output directory |
+| `--input` / `-i` | `tests` | File path or inline text / JSON |
 | `--type positive\|negative` | `tests` | Force test type for plain-text input |
+| `--from-staging FILE` | `tests` | Load from a previously saved `parsed_test_cases.json` |
+| `--dry-run` | `tests` | Write prompt files only, skip LLM |
+
+## Environment Variables
+
+All settings go in `.env` in this directory. See `.env.example` for the full list.
+
+| Variable | Provider | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | anthropic | Claude API key |
+| `GEMINI_API_KEY` | gemini | Google AI Studio key |
+| `GEMINI_MODEL` | gemini | Model override (default: `gemini-2.0-flash`) |
+| `GCP_CREDENTIALS_PATH` | vertexai | Filename of the service account JSON (relative to this directory) |
+| `GCP_PROJECT` | vertexai | GCP project ID |
+| `GCP_LOCATION` | vertexai | Region (default: `us-central1`) |
+| `VERTEX_MODEL` | vertexai | Model override (default: `gemini-2.0-flash`) |
 
 ## File Overview
 
 | File | Purpose |
-| --- | --- |
-| `main.py` | CLI entry point, wires subcommands together |
-| `extractor.py` | Parses JSX files, extracts `data-testid` and `id` values into `selector_manifest.json` |
-| `selector_manifest.json` | Ground truth of all selectors in the app; re-run extractor after UI changes |
+|---|---|
+| `main.py` | CLI entry point — wires subcommands and provider selection |
+| `extractor.py` | Scans `.jsx` / `.tsx` files, extracts `data-testid` and `id` values, writes `selector_manifest.json` |
+| `selector_manifest.json` | Ground truth of all selectors — re-run extractor after any UI change |
 | `prompt_builder.py` | Builds system + user prompts for locators, pages, and test specs |
-| `llm_client.py` | `LLMClient` (API) and `SDKClient` (claude CLI) with identical `generate()` interface |
-| `writer.py` | Strips markdown fences from LLM output, writes files, scaffolds directories |
-| `validator.py` | Node.js syntax check on generated `.js` files |
-| `input_parser.py` | Parses Excel/CSV/JSON/text into structured test case dicts |
-| `feedback.py` | Collects pass/fail feedback to improve future generations |
+| `llm_client.py` | Provider adapters: `LLMClient` (Anthropic), `SDKClient` (claude CLI), `GeminiClient`, `VertexAIClient` |
+| `writer.py` | Strips markdown fences, writes files, scaffolds directories |
+| `validator.py` | `node --check` syntax validation on generated `.js` files |
+| `input_parser.py` | Parses Excel / CSV / JSON / plain text into structured test case dicts |
+| `feedback.py` | Collects pass/fail results for future prompt improvement (not yet integrated) |
+| `.env` | Local secrets — never commit |
+| `.env.example` | Template — copy to `.env` and fill in |
 
 ## Reference Examples (`e2e-sample/`)
 
-The `e2e-sample/` directory contains hand-crafted reference implementations used as few-shot examples in every prompt. The generator reads these at runtime — do not delete them.
+The `e2e-sample/` directory contains hand-crafted implementations used as few-shot examples in every prompt. Do not delete or rename these files.
 
-```txt
+```
 e2e-sample/
-├── locators/    # Reference locator files (one per entity)
-├── pages/       # Reference page objects
-├── utils/       # ApiHelper reference
-└── tests/       # Reference test specs (tc_man_01 – tc_man_05)
+├── locators/    # Reference locator classes
+├── pages/       # Reference page objects + BasePage.js
+├── utils/       # ApiHelper.js
+└── tests/       # Reference specs: tc_man_01 – tc_man_05
 ```
 
-| Sample test | Covers |
+| Sample | Covers |
 |---|---|
-| `tc_man_01.spec.js` | Country→State dropdown: initial disabled state, US triggers dropdown, 50 states present |
-| `tc_man_02.spec.js` | Country→State: US→NY confirm, switch to Canada hides dropdown, XPath label assertion |
+| `tc_man_01.spec.js` | Country→State dropdown: initial state, US triggers dropdown, all 50 states present |
+| `tc_man_02.spec.js` | US→NY confirm, switch to Canada hides dropdown, XPath label assertion |
 | `tc_man_03.spec.js` | Order wizard: step navigation, product selection, customer required validation |
 | `tc_man_04.spec.js` | Order filters: status/priority checkboxes, active filter chips, API negative test |
 | `tc_man_05.spec.js` | Dashboard stats: customer/order/revenue counts match API data |
 
 ## Re-extracting Selectors
 
-If the React components change, re-run the extractor to update `selector_manifest.json`:
+Run this whenever React components change:
 
 ```bash
-cd automation/generator
 python extractor.py
+# or via main.py:
+python main.py e2e --only locators
 ```
 
-Then regenerate locators:
-
-```bash
-python main.py e2e --only locators --sdk
-```
+The extractor scans all `.jsx` and `.tsx` files under the configured `src/` directory and classifies each selector by its entity prefix automatically — it works with any React app that follows `{entity}-{element}` naming.
 
 ## Output Location
 
-All generated files go to `automation/e2e-generated/` by default (configurable with `--output`). This folder is excluded from manual editing — treat it as build output.
+Generated files go to `automation/e2e-generated/` by default. Change with `--output`. Treat this folder as build output — regenerate rather than hand-edit.

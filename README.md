@@ -1,55 +1,32 @@
 # Customer Order Management
 
-A full-stack application for managing customers, products, and orders. Built with QA automation in mind — every element has stable `id` and `data-testid` attributes, and the project includes an LLM-powered Playwright test generator.
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Backend | Python 3.12, FastAPI, SQLAlchemy, SQLite, Pydantic |
-| Frontend | React 18, Vite, Axios |
-| E2E Testing | Playwright (Node) |
-| Test Generator | Python, Anthropic Claude API / Claude Code CLI |
-
-## Project Structure
-
-```
-customer_order_management/
-├── backend/               # FastAPI + SQLAlchemy API
-├── frontend/              # React 18 + Vite UI
-├── automation/            # Playwright tests + LLM generator
-├── docs/                  # Additional documentation
-├── venv/                  # Shared Python virtual environment
-├── node_modules/          # Shared Node modules (npm workspaces)
-├── package.json           # Root npm workspace config
-└── requirements.txt       # Combined Python dependencies
-```
+A full-stack application for managing customers, products, and orders — built with QA automation as a first-class concern. Every interactive element has stable `data-testid` and `id` attributes, and the project ships an LLM-powered Playwright test generator.
 
 ## Quick Start
 
-### 1. Python (backend + generator)
+### 1. Python environment
 
 ```bash
-# From project root
-python -m venv venv            # skip if present
-venv/Scripts/activate          # Windows
-# source venv/bin/activate     # Mac/Linux
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Mac / Linux
 
 pip install -r requirements.txt
 ```
 
-### 2. Node (frontend + Playwright)
+### 2. Node environment
 
 ```bash
-# From project root
-npm install                    # installs for both frontend/ and automation/
+npm install    # installs for both frontend/ and automation/ workspaces
 ```
 
 ### 3. Run the application
 
+Open two terminals:
+
 ```bash
 # Terminal 1 — backend
-venv/Scripts/activate
+venv\Scripts\activate
 cd backend
 uvicorn main:app --reload --port 8000
 
@@ -58,24 +35,31 @@ cd frontend
 npm run dev
 ```
 
-- Frontend: http://localhost:5173
-- API: http://localhost:8000
-- API docs (Swagger): http://localhost:8000/docs
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:8000/api |
+| Swagger UI | http://localhost:8000/docs |
 
 ### 4. Run E2E tests
 
 ```bash
-# From project root
-npm test                        # headless
-npm run test:headed             # with browser visible
-npm run test:ui                 # Playwright UI mode
+npm test                  # headless
+npm run test:headed       # browser visible
+npm run test:ui           # Playwright interactive UI
 ```
 
-Refer to [automation](automation) for further docs on testing.
+## What It Does
+
+Manage three resources through a React UI backed by a FastAPI REST API:
+
+- **Customers** — name, type (Consumer / SMB / Enterprise), contact details, address
+- **Products** — name, type (Basic / Professional / Teams / Ultra-Enterprise), price per seat, stock
+- **Orders** — link a customer to one or more products with seat counts; discount and status tracking
 
 ## Business Rules
 
-**Customer types and allowed products:**
+**Product availability by customer type:**
 
 | Customer Type | Allowed Products |
 |---|---|
@@ -83,41 +67,47 @@ Refer to [automation](automation) for further docs on testing.
 | SMB | Professional, Teams |
 | Enterprise | Basic, Teams, Ultra-Enterprise |
 
-**Order rules:**
-- One order → one customer, many products
-- Each product line has a seat count (minimum 1)
-- Product availability is validated on both frontend and backend
-- Discount is a percentage (0–100) applied to the order total
+**Order constraints:**
+- One order → one customer, one or more products
+- Each product line requires a seat count (minimum 1)
+- Discount is a percentage (0–100) applied to the total
+- Availability is enforced on both frontend and backend (HTTP 400 on violation)
 
-**Data constraints:**
+**Data integrity:**
 - Customer email must be unique
-- Products cannot be deleted if referenced in existing orders
+- Products in use cannot be deleted
 - Deleting a customer cascades to all their orders
 
-## API Overview
+## Project Structure
 
-| Resource | Endpoints |
+```
+order-management/
+├── backend/                 # FastAPI + SQLAlchemy API
+├── frontend/                # React 18 + Vite UI
+├── automation/              # Playwright E2E tests
+│   └── generator/           # LLM-powered test generator CLI
+├── package.json             # Root npm workspace config
+└── requirements.txt         # Python dependencies (backend + generator)
+```
+
+## Sub-folder Guides
+
+| Folder | README |
 |---|---|
-| Customers | `GET/POST /api/customers`, `GET/PUT/DELETE /api/customers/{id}` |
-| Products | `GET/POST /api/products`, `GET/PUT/DELETE /api/products/{id}` |
-| Orders | `GET/POST /api/orders`, `GET/PUT/DELETE /api/orders/{id}` |
-| Utilities | `GET /api/products/available/{customer_type}`, `GET /api/health` |
-| Dashboard | `GET /api/dashboard` |
+| `backend/` | [API reference, data models, running the server](backend/README.md) |
+| `frontend/` | [Components, test IDs, dev setup](frontend/README.md) |
+| `automation/` | [Running tests, Playwright config](automation/README.md) |
+| `automation/generator/` | [LLM generator CLI, all providers](automation/generator/README.md) |
 
-See [backend/README.md](backend/README.md) for full request/response schemas.
-
-## Sub-project READMEs
-
-- [backend/README.md](backend/README.md) — API details, models, running the server
-- [frontend/README.md](frontend/README.md) — Components, scripts, dev setup
-- [automation/README.md](automation/README.md) — Running tests, Playwright config
-- [automation/generator/README.md](automation/generator/README.md) — LLM test generator CLI
+For architecture details, internals, and contributor guidance see [DEVELOPERS_GUIDE.md](DEVELOPERS_GUIDE.md).
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---|---|
 | Backend won't start | Activate venv, run `pip install -r requirements.txt` |
-| Frontend blank/error | Ensure backend is on port 8000; check CORS |
-| Database errors | Delete `backend/app.db` — it recreates automatically |
-| Playwright can't find elements | Regenerate locators: `python automation/generator/main.py e2e --only locators` |
+| Frontend blank or CORS error | Ensure backend is running on port 8000 |
+| Database errors | Delete `backend/app.db` — it recreates on next start |
+| `playwright install chromium` fails (SSL / corporate network) | Set `CHROME_PATH` to your system Chrome; the config falls back automatically |
+| Playwright can't find elements after UI changes | Re-run `python automation/generator/main.py e2e --only locators` |
+| `ImportError: cannot import name 'ToolAnnotations'` | `pip uninstall mcp -y && pip install "mcp>=1.0.0"` |

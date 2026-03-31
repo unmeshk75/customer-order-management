@@ -2,42 +2,52 @@ import { test, expect } from '@playwright/test';
 import { CustomerPage } from '../pages/CustomerPage.js';
 import { ApiHelper } from '../utils/ApiHelper.js';
 
-test.describe('TC-CUST-01-TC03: [Positive] SMB customer — company name field appears and is submitted successfully', () => {
+test.describe('TC_CUST_01-TC03: [Positive] SMB customer — company name field appears and is submitted successfully', () => {
 
   let createdCustomerId;
-  const TEST_NAME = 'SMB_TC03_Test';
+  const testNamePattern = 'SMB_TC03_';
 
   test.afterAll(async ({ request }) => {
     const api = new ApiHelper(request);
-    await api.cleanupCustomersByName(TEST_NAME);
+    await api.cleanupCustomersByName(testNamePattern);
   });
 
-  test('[Positive] SMB customer — company name field appears and is submitted successfully', async ({ page }) => {
+  test('[Positive] Company Name field is hidden by default and visible after selecting SMB, then submits successfully', async ({ page }) => {
     const customerPage = new CustomerPage(page);
+    const uniqueSuffix = Date.now();
+    const customerName = `${testNamePattern}${uniqueSuffix}`;
+    const companyName = `SMB Corp ${uniqueSuffix}`;
+    const email = `smb.tc03.${uniqueSuffix}@test.example`;
+    const country = 'Canada';
+
+    // Step 1: Navigate to Customers section
     await customerPage.navigateToCustomers();
+
+    // Step 2: Click 'Add Customer'
     await customerPage.openCreateForm();
 
-    // Assert Company Name field is hidden before SMB is selected (default type is Consumer)
+    // Step 3: Assert Company Name field is hidden (default type is Consumer)
     await expect(customerPage.loc.companyNameGroup).not.toBeVisible();
 
-    // Select Type = 'SMB'
+    // Step 4: Select Type = 'SMB'
     await customerPage.selectType('SMB');
 
-    // Assert Company Name field is now VISIBLE
+    // Step 5: Assert Company Name field is now VISIBLE
     await expect(customerPage.loc.companyNameGroup).toBeVisible();
 
-    // Fill all required fields
-    await customerPage.fillName(`${TEST_NAME}_User`);
-    await customerPage.fillCompanyName(`${TEST_NAME}_Corp`);
-    await customerPage.fillEmail('smb_tc03@example.com');
-    await customerPage.fillCountry('Canada');
+    // Step 6: Fill Name, Company Name, Email, Country
+    await customerPage.fillName(customerName);
+    await customerPage.fillCompanyName(companyName);
+    await customerPage.fillEmail(email);
+    await customerPage.fillCountry(country);
 
-    // Submit the form
+    // Step 7: Submit the form
     await customerPage.submitForm();
 
-    // Assert company name appears in the customers table
-    await expect(customerPage.loc.customerListContainer).toBeVisible();
-    await expect(page.getByText(`${TEST_NAME}_Corp`)).toBeVisible();
+    // Step 8: Assert company name appears in the customers table row
+    const tableBody = customerPage.loc.customerListContainer;
+    await expect(tableBody).toBeVisible();
+    await expect(page.getByText(companyName)).toBeVisible();
   });
 
 });

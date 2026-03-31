@@ -1,13 +1,18 @@
 """
 extractor.py
 ────────────────────────────────────────────────────────────────────────────
-Scan frontend JSX source files and build a selector manifest.
+Scan frontend JSX/TSX source files and build a selector manifest.
 
 For every data-testid and id attribute found, records:
   - the file it came from
   - the HTML element type (button, input, select, div, …)
   - any condition expression guarding it (e.g. "country === 'US'")
-  - the entity group (customer / product / order / dashboard / navigation / modal)
+  - the entity group (derived from the selector prefix, e.g. "customer",
+    "product", "navigation", "modal")
+
+Entity classification is fully automatic — it reads the first hyphen-separated
+token of the selector name as the entity, with special handling for navigation
+and modal patterns so this works with any React app without configuration.
 
 Outputs selector_manifest.json in the same directory as this script.
 ────────────────────────────────────────────────────────────────────────────
@@ -23,14 +28,36 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_SRC = os.path.normpath(os.path.join(_HERE, '..', '..', 'frontend', 'src'))
 MANIFEST_PATH = os.path.join(_HERE, 'selector_manifest.json')
 
-# ── entity keywords ────────────────────────────────────────────────────────
-ENTITY_KEYWORDS = {
-    'customer':   ['customer', 'contact', 'company', 'state', 'country'],
-    'product':    ['product', 'stock', 'price', 'inventory'],
-    'order':      ['order', 'wizard', 'checkout', 'seat', 'discount'],
-    'dashboard':  ['dashboard', 'revenue', 'stat', 'low-stock', 'lowstock'],
-    'navigation': ['nav', 'navigation'],
-    'modal':      ['modal', 'confirm', 'overlay', 'dialog'],
+# ── utility entity detection ───────────────────────────────────────────────
+# Selectors whose prefix (or any token) matches these are classified as
+# cross-cutting utility entities rather than domain entities.  Utility
+# entities get locator files but NOT page-object files.
+_NAV_TOKENS   = {'nav', 'navigation', 'navbar', 'sidebar', 'menu'}
+_MODAL_TOKENS = {'modal', 'dialog', 'confirm', 'overlay', 'popup', 'drawer'}
+
+# Tokens that appear as selector prefixes but are NOT entity names.
+# When the first token is one of these, we look at the second token instead.
+_NON_ENTITY_TOKENS = {
+    # Action verbs
+    'add', 'create', 'edit', 'update', 'delete', 'remove', 'cancel',
+    'submit', 'save', 'open', 'close', 'toggle', 'show', 'hide',
+    'view', 'expand', 'collapse', 'filter', 'search', 'sort', 'clear',
+    'review', 'select', 'check', 'uncheck', 'reset', 'refresh',
+    # UI structural words
+    'btn', 'button', 'form', 'list', 'table', 'row', 'col', 'column',
+    'input', 'label', 'text', 'title', 'header', 'footer', 'card',
+    'panel', 'section', 'container', 'wrapper', 'item', 'tab',
+    # Generic descriptors / sub-component words
+    'detail', 'info', 'count', 'total', 'subtotal', 'low', 'high',
+    'all', 'new', 'is', 'has', 'can', 'should', 'no',
+    'wizard', 'step', 'chip', 'badge', 'tag', 'icon', 'avatar',
+    'revenue', 'stat', 'metric', 'summary', 'stock',
+    # Navigation direction words
+    'back', 'next', 'prev', 'previous', 'forward',
+    # Common field/attribute names that are NOT entity names
+    'name', 'type', 'value', 'status', 'code', 'date', 'time',
+    'price', 'qty', 'quantity', 'amount', 'email', 'phone',
+    'address', 'city', 'state', 'country', 'zip', 'indicator',
 }
 
 # ── regex patterns ─────────────────────────────────────────────────────────
@@ -48,12 +75,49 @@ _ELEMENT_RE = re.compile(r'<(\w+)')
 _CONDITION_RE = re.compile(r'\{([^{}]+?)\s*&&\s*$')
 
 
+def _normalize_entity(token: str) -> str:
+    """Strip a common English plural suffix so 'customers' → 'customer'."""
+    if len(token) > 4 and token.endswith('s') and not token.endswith('ss'):
+        return token[:-1]
+    return token
+
+
 def _classify_entity(value: str) -> str:
-    """Return the entity group for a testid/id string."""
+    """
+    Derive the entity group from a selector string.
+
+    Rules (applied in order):
+    1. If the first token is a navigation keyword → 'navigation'
+    2. If any token is a modal keyword → 'modal'
+    3. Otherwise scan tokens left-to-right, skip action verbs and structural
+       UI words, and return the first meaningful token (de-pluralised).
+
+    This works for any React app that follows the common convention
+    {entity}-{element}  or  {verb}-{entity}-{element}
+    (e.g. "product-price-input" → "product",
+          "add-customer-btn"    → "customer").
+    """
     low = value.lower()
-    for entity, keywords in ENTITY_KEYWORDS.items():
-        if any(kw in low for kw in keywords):
-            return entity
+    # Strip the "id:" prefix used for id="" entries
+    if low.startswith('id:'):
+        low = low[3:]
+    parts = [p for p in low.split('-') if p]
+    if not parts:
+        return 'general'
+    if parts[0] in _NAV_TOKENS:
+        return 'navigation'
+    if any(t in _MODAL_TOKENS for t in parts):
+        return 'modal'
+    # Find the first meaningful token: skip action verbs, UI-structural words,
+    # template expression fragments (${...}), and skip after normalizing plurals.
+    for token in parts:
+        if token.startswith('$'):          # template expression fragment, e.g. ${id}
+            continue
+        normalized = _normalize_entity(token)
+        if (normalized not in _NON_ENTITY_TOKENS
+                and normalized not in _NAV_TOKENS
+                and normalized not in _MODAL_TOKENS):
+            return normalized
     return 'general'
 
 
@@ -89,10 +153,13 @@ def extract(src_dir: str = DEFAULT_SRC) -> dict:
     Returns the manifest dict and also writes selector_manifest.json.
     """
     manifest: dict[str, dict] = {}
-    jsx_files = glob.glob(os.path.join(src_dir, '**', '*.jsx'), recursive=True)
+    jsx_files = (
+        glob.glob(os.path.join(src_dir, '**', '*.jsx'), recursive=True)
+        + glob.glob(os.path.join(src_dir, '**', '*.tsx'), recursive=True)
+    )
 
     if not jsx_files:
-        print(f'[extractor] WARNING: no .jsx files found under {src_dir}')
+        print(f'[extractor] WARNING: no .jsx/.tsx files found under {src_dir}')
         return manifest
 
     for filepath in jsx_files:
@@ -106,6 +173,10 @@ def extract(src_dir: str = DEFAULT_SRC) -> dict:
             # group 1 = double-quoted, group 2 = template literal, group 3 = single-quoted
             value = m.group(1) or m.group(2) or m.group(3)
             if not value:
+                continue
+            # Skip purely-dynamic template literals (e.g. `${customer.id}`)
+            # that have no static prefix — they cannot be used as selectors.
+            if value.startswith('${'):
                 continue
             line_idx = content[:m.start()].count('\n')
             element  = _find_element_type(lines, line_idx)
@@ -149,6 +220,28 @@ def extract(src_dir: str = DEFAULT_SRC) -> dict:
 
     print(f'[extractor] wrote {len(manifest)} entries -> {MANIFEST_PATH}')
     return manifest
+
+
+def get_all_entities(manifest: dict) -> list[str]:
+    """
+    Return the sorted list of unique entity names found in the manifest,
+    excluding the catch-all 'general' bucket.
+
+    Entity names are Title-cased so they can be used directly as JS class
+    name prefixes (e.g. 'customer' → 'Customer').
+    """
+    raw = {v['entity'] for v in manifest.values() if v.get('entity') != 'general'}
+    return sorted(e.capitalize() for e in raw)
+
+
+def get_page_entities(manifest: dict) -> list[str]:
+    """
+    Return Title-cased entity names that should receive a Page object file.
+
+    Utility entities (navigation, modal) get locator files only.
+    """
+    utility = {e.capitalize() for e in (_NAV_TOKENS | _MODAL_TOKENS)}
+    return [e for e in get_all_entities(manifest) if e not in utility]
 
 
 def load() -> dict:

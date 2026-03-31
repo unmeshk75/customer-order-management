@@ -17,7 +17,7 @@
     "file": "CustomerForm.jsx",
     "element": "div",
     "condition": "always",
-    "entity": "customer",
+    "entity": "company",
     "type": "testid"
   },
   "customer-company-input": {
@@ -271,7 +271,7 @@
     "file": "CustomerList.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "customer",
+    "entity": "general",
     "type": "testid"
   },
   "customer-id-${customer.id}": {
@@ -355,14 +355,14 @@
     "file": "CustomerList.jsx",
     "element": "tr",
     "condition": "always",
-    "entity": "customer",
+    "entity": "general",
     "type": "testid"
   },
   "detail-table-${customer.id}": {
     "file": "CustomerList.jsx",
     "element": "table",
     "condition": "always",
-    "entity": "customer",
+    "entity": "general",
     "type": "testid"
   },
   "id:customer-list-error": {
@@ -408,7 +408,7 @@
     "file": "Dashboard.jsx",
     "element": "div",
     "condition": "always",
-    "entity": "customer",
+    "entity": "dashboard",
     "type": "testid"
   },
   "customer-total": {
@@ -436,7 +436,7 @@
     "file": "Dashboard.jsx",
     "element": "div",
     "condition": "always",
-    "entity": "order",
+    "entity": "dashboard",
     "type": "testid"
   },
   "order-total": {
@@ -471,42 +471,42 @@
     "file": "Dashboard.jsx",
     "element": "div",
     "condition": "always",
-    "entity": "dashboard",
+    "entity": "general",
     "type": "testid"
   },
   "dashboard-card-lowstock": {
     "file": "Dashboard.jsx",
     "element": "div",
     "condition": "always",
-    "entity": "product",
+    "entity": "dashboard",
     "type": "testid"
   },
   "low-stock-count": {
     "file": "Dashboard.jsx",
     "element": "span",
     "condition": "always",
-    "entity": "product",
+    "entity": "general",
     "type": "testid"
   },
   "low-stock-row": {
     "file": "Dashboard.jsx",
     "element": "div",
     "condition": "always",
-    "entity": "product",
+    "entity": "general",
     "type": "testid"
   },
   "low-stock-name-${p.id}": {
     "file": "Dashboard.jsx",
     "element": "span",
     "condition": "always",
-    "entity": "product",
+    "entity": "general",
     "type": "testid"
   },
   "low-stock-qty-${p.id}": {
     "file": "Dashboard.jsx",
     "element": "span",
     "condition": "always",
-    "entity": "product",
+    "entity": "general",
     "type": "testid"
   },
   "modal-overlay": {
@@ -555,35 +555,35 @@
     "file": "Navigation.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "dashboard",
+    "entity": "navigation",
     "type": "testid"
   },
   "nav-customers": {
     "file": "Navigation.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "customer",
+    "entity": "navigation",
     "type": "testid"
   },
   "nav-products": {
     "file": "Navigation.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "product",
+    "entity": "navigation",
     "type": "testid"
   },
   "nav-orders": {
     "file": "Navigation.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "order",
+    "entity": "navigation",
     "type": "testid"
   },
   "id:nav-dashboard": {
     "file": "Navigation.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "dashboard",
+    "entity": "navigation",
     "type": "id",
     "id": "nav-dashboard"
   },
@@ -591,7 +591,7 @@
     "file": "Navigation.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "customer",
+    "entity": "navigation",
     "type": "id",
     "id": "nav-customers"
   },
@@ -599,7 +599,7 @@
     "file": "Navigation.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "product",
+    "entity": "navigation",
     "type": "id",
     "id": "nav-products"
   },
@@ -607,7 +607,7 @@
     "file": "Navigation.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "order",
+    "entity": "navigation",
     "type": "id",
     "id": "nav-orders"
   },
@@ -622,14 +622,14 @@
     "file": "OrderForm.jsx",
     "element": "div",
     "condition": "always",
-    "entity": "customer",
+    "entity": "order",
     "type": "testid"
   },
   "order-customer-select": {
     "file": "OrderForm.jsx",
     "element": "select",
     "condition": "always",
-    "entity": "customer",
+    "entity": "order",
     "type": "testid"
   },
   "order-status-select": {
@@ -671,7 +671,7 @@
     "file": "OrderForm.jsx",
     "element": "select",
     "condition": "always",
-    "entity": "product",
+    "entity": "order",
     "type": "testid"
   },
   "order-seats-${index}": {
@@ -685,7 +685,7 @@
     "file": "OrderForm.jsx",
     "element": "span",
     "condition": "always",
-    "entity": "product",
+    "entity": "general",
     "type": "testid"
   },
   "remove-product-${index}": {
@@ -727,7 +727,7 @@
     "file": "OrderForm.jsx",
     "element": "div",
     "condition": "always",
-    "entity": "product",
+    "entity": "order",
     "type": "testid"
   },
   "review-table": {
@@ -748,21 +748,21 @@
     "file": "OrderForm.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "order",
+    "entity": "general",
     "type": "testid"
   },
   "wizard-next": {
     "file": "OrderForm.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "order",
+    "entity": "general",
     "type": "testid"
   },
   "wizard-submit": {
     "file": "OrderForm.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "order",
+    "entity": "general",
     "type": "testid"
   },
   "cancel-order-btn": {
@@ -784,7 +784,7 @@
     "file": "OrderForm.jsx",
     "element": "select",
     "condition": "always",
-    "entity": "customer",
+    "entity": "order",
     "type": "id",
     "id": "order-customer"
   },
@@ -824,7 +824,7 @@
     "file": "OrderForm.jsx",
     "element": "fieldset",
     "condition": "always",
-    "entity": "product",
+    "entity": "order",
     "type": "id",
     "id": "order-products-section"
   },
@@ -862,7 +862,7 @@
     "file": "OrderList.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "general",
+    "entity": "navigation",
     "type": "testid"
   },
   "create-order-btn": {
@@ -897,7 +897,7 @@
     "file": "OrderList.jsx",
     "element": "button",
     "condition": "always",
-    "entity": "order",
+    "entity": "general",
     "type": "testid"
   },
   "order-id-${order.id}": {
@@ -911,14 +911,14 @@
     "file": "OrderList.jsx",
     "element": "td",
     "condition": "always",
-    "entity": "customer",
+    "entity": "order",
     "type": "testid"
   },
   "order-customer-type-${order.id}": {
     "file": "OrderList.jsx",
     "element": "td",
     "condition": "always",
-    "entity": "customer",
+    "entity": "order",
     "type": "testid"
   },
   "order-date-${order.id}": {
@@ -981,21 +981,21 @@
     "file": "OrderList.jsx",
     "element": "tr",
     "condition": "always",
-    "entity": "order",
+    "entity": "general",
     "type": "testid"
   },
   "detail-table-${order.id}": {
     "file": "OrderList.jsx",
     "element": "table",
     "condition": "always",
-    "entity": "order",
+    "entity": "general",
     "type": "testid"
   },
   "detail-subtotal-${p.product_id}": {
     "file": "OrderList.jsx",
     "element": "td",
     "condition": "always",
-    "entity": "product",
+    "entity": "general",
     "type": "testid"
   },
   "id:order-list-error": {
