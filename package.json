@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "frontend",
-    "automation"
+    "automation",
+    "dashboard/frontend"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=frontend",
