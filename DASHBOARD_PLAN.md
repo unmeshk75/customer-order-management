@@ -62,7 +62,7 @@ dashboard/
 | source_type | TEXT | `'folder'` or `'zip'` |
 | source_path | TEXT | absolute path to project root |
 | src_subdir | TEXT | relative path to JSX/TSX src, default `'src'` |
-| output_dir | TEXT | absolute path for e2e-generated output |
+| output_dir | TEXT | absolute path to project-specific generator automation folder |
 | manifest_path | TEXT | absolute path to last written selector_manifest.json |
 | entities | TEXT | JSON array of detected entity names |
 | status | TEXT | `'ready'` `'extracting'` `'generating'` `'error'` |
@@ -310,14 +310,14 @@ for suite in data['suites']:
 1. `os.path.isdir(path)` — must exist
 2. `os.path.isdir(os.path.join(path, src_subdir))` — src must exist
 3. Glob for `.jsx`/`.tsx` — warn if empty
-4. Default `output_dir = os.path.join(path, 'e2e-generated')`
+4. Default `output_dir = os.path.join(automation_base_dir, project_slug)`
 
 **Zip extraction:**
 1. Save to `uploads/{uuid}.zip`
 2. Extract to `workspaces/{name}/` using `zipfile`
 3. Strip single top-level dir if all entries share one (GitHub download pattern)
 4. Auto-detect `src_subdir`: try `src/`, `frontend/src/`, `app/` — pick first with `.jsx`/`.tsx` files
-5. Default `output_dir = workspaces/{name}/e2e-generated/`
+5. Default `output_dir = os.path.join(automation_base_dir, project_slug)`
 
 ---
 

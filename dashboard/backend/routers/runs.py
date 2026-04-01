@@ -4,9 +4,10 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db, SessionLocal
-from models import TestRun, Project
+from models import TestRun, Project, AuditLog
 from schemas import TestRunResponse, TestRunCreate
-from services.runner_service import execute_playwright_run
+from services.runner_service import execute_playwright_run, ACTIVE_TEST_RUNS, _append_run_log
+import subprocess, os, signal
 
 router = APIRouter()
 
@@ -36,6 +37,12 @@ def create_run(data: TestRunCreate, background_tasks: BackgroundTasks, db: Sessi
         base_url=base_url
     )
     db.add(run)
+
+    db.add(AuditLog(
+        action_type="TEST_TRIGGERED",
+        description=f"Triggered run for project {data.project_id} {data.spec_filter or 'BATCH'}"
+    ))
+
     db.commit()
     db.refresh(run)
 
@@ -59,7 +66,7 @@ async def stream_run_logs(id: int):
                     yield f"data: {json.dumps({'type':'log','text':current_log[last_len:]})}\n\n"
                     last_len = len(current_log)
                     
-                if run.status in ('passed', 'failed', 'error'):
+                if run.status in ('passed', 'failed', 'error', 'halted'):
                     yield f"data: {json.dumps({'type':'done','status':run.status})}\n\n"
                     break
             finally:
@@ -75,3 +82,28 @@ def delete_run(id: int, db: Session = Depends(get_db)):
         db.delete(run)
         db.commit()
     return {"status": "ok"}
+
+@router.post("/{id}/cancel")
+def cancel_run(id: int, db: Session = Depends(get_db)):
+    run = db.query(TestRun).get(id)
+    if not run: raise HTTPException(404, "Run not found")
+    
+    proc = ACTIVE_TEST_RUNS.get(id)
+    if proc:
+        try:
+            # Terminate the shell wrapped subprocess gracefully
+            if os.name == 'nt':
+                subprocess.call(['taskkill', '/F', '/T', '/PID', str(proc.pid)])
+            else:
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        except Exception:
+            pass # ignore if already dead
+    
+    run.status = "halted"
+    db.add(AuditLog(
+        action_type="TEST_HALTED",
+        description=f"Manually halted test run {id}"
+    ))
+    db.commit()
+    _append_run_log(db, id, "\n[SYSTEM] USER INITIATED HALT -> TEST TERMIANTED.\n")
+    return {"status": "halted"}

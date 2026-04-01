@@ -1,0 +1,501 @@
+=== SYSTEM ===
+You are an expert Playwright test automation engineer.
+Generate a single Playwright test spec file.
+Do not overthink. Output the file directly without any reasoning or analysis preamble.
+
+CRITICAL — EXACT IMPORTS (copy these verbatim, do NOT change class names or paths):
+  import { test, expect } from '@playwright/test';
+  import { CustomerPage } from '../pages/CustomerPage.js';
+  import { ApiHelper } from '../utils/ApiHelper.js';
+  ❌ NEVER use plural or variant names (e.g. CustomersPage, Customers).
+  ✅ The page class is ALWAYS named exactly: CustomerPage
+
+FILE STRUCTURE RULES:
+  • ES module imports only
+  • One test.describe block per test case group
+  • ❌ NEVER save `let api;` globally or reuse a { request } fixture across tests
+  • test.beforeAll: instantiate `const api = new ApiHelper(request);` locally
+  • test.afterAll: instantiate `const api = new ApiHelper(request);` locally
+  • Individual tests: [Positive] or [Negative] prefix in test name
+  • Each test is independent: navigate fresh, interact, assert, clean up
+  ❌ NEVER shadow the imported class with a same-named variable:
+     BAD:  const CustomerPage = new CustomerPage(page)   ← TDZ crash
+     GOOD: const customerPage = new CustomerPage(page)   ← camelCase variable
+  Note that CustomerPage is the correct class name.
+
+CRITICAL CONSTRAINT — WAITING STRATEGY:
+  ❌ NEVER use:  setTimeout, page.waitForTimeout, any hardcoded ms delay
+  ✅ ALWAYS use explicit Playwright mechanisms:
+      • locator.waitFor({ state: 'visible' | 'hidden' | 'attached' | 'detached' })
+      • expect(locator).toBeVisible()
+      • expect(locator).toBeEnabled()
+      • expect(locator).toHaveCount(n)
+      • expect(locator).toHaveText(...)
+      • expect(async () => { ... }).toPass()
+  These have built-in retry logic and no hardcoded delays.
+
+ASSERTION RULES:
+  • Use expect(locator).toBeVisible() not manual waitForVisible
+  • Use expect(locator).toBeEnabled() / toBeDisabled()
+  • Use expect(locator).toHaveValue('x') / toHaveText('x') / toContainText('x')
+  • Use expect(locator).toHaveAttribute('attr', 'val')
+  • Use expect(locator).toHaveCount(n) for lists
+  • Use expect(locator).not.toBeVisible() for hidden assertions
+  • XPath locators from the page object's .loc property can be used directly in expect()
+
+OUTPUT: Return ONLY the raw JavaScript file content. No markdown, no explanation.
+
+
+=== USER ===
+Generate a Playwright spec file for the following test cases.
+
+REMINDER — use these exact imports at the top of the file:
+  import { test, expect } from '@playwright/test';
+  import { CustomerPage } from '../pages/CustomerPage.js';
+  import { ApiHelper } from '../utils/ApiHelper.js';
+
+=== TEST CASES ===
+[
+  {
+    "id": "TC_CUST_01-TC01",
+    "name": "[Positive] Entering 'US' as country renders State dropdown",
+    "scenario": "When a user types 'US' in the Country field, the State field dynamically changes from a disabled text input to an active SELECT dropdown.",
+    "expected": "\u2022 Before country=US: State is a disabled INPUT.\n\u2022 After typing 'US': a State SELECT dropdown appears (following-sibling XPath).\n\u2022 State label shows '*' indicating it is required.",
+    "type": "positive",
+    "steps": "1. Navigate to Customers and open 'Add Customer' form.\n2. Assert State INPUT is visible and disabled.\n3. Enter 'US' in the Country field.\n4. Assert State SELECT dropdown is visible (XPath: //label[@for='customer-state']/following-sibling::select).\n5. Assert State label text contains '*'.",
+    "entity": "Customer",
+    "spec_file": "TC_CUST_01.spec.js"
+  }
+]
+
+=== CustomerPage.js (page object to use — its .loc property has all locators) ===
+import { BasePage } from './BasePage.js';
+import { CustomerLocators } from '../locators/CustomerLocators.js';
+import { NavigationLocators } from '../locators/NavigationLocators.js';
+import { ModalLocators } from '../locators/ModalLocators.js';
+
+export class CustomerPage extends BasePage {
+  constructor(page) {
+    super(page);
+    this.navLoc = new NavigationLocators(page);
+    this.loc = new CustomerLocators(page);
+    this.modal = new ModalLocators(page);
+  }
+
+  async navigateToCustomers() {
+    await this.goto();
+    await this.waitForVisible(this.navLoc.customersBtn);
+    await this.navLoc.customersBtn.click();
+    await this.waitForVisible(this.loc.customerList);
+  }
+
+  async openCreateForm() {
+    await this.waitForEnabled(this.loc.createCustomerBtn);
+    await this.loc.createCustomerBtn.click();
+    await this.waitForVisible(this.loc.customerForm);
+  }
+
+  async fillCustomerForm(data) {
+    if (data.name !== undefined) await this.clearAndFill(this.loc.customerNameInput, data.name);
+    if (data.type !== undefined) await this.selectByValue(this.loc.customerTypeSelect, data.type);
+    if (data.company !== undefined) await this.clearAndFill(this.loc.customerCompanyInput, data.company);
+    if (data.email !== undefined) await this.clearAndFill(this.loc.customerEmailInput, data.email);
+    if (data.phone !== undefined) await this.clearAndFill(this.loc.customerPhoneInput, data.phone);
+    if (data.accountStatus !== undefined) await this.selectByValue(this.loc.customerAccountStatusSelect, data.accountStatus);
+    if (data.contactPreference !== undefined) await this.selectByValue(this.loc.customerContactPreferenceSelect, data.contactPreference);
+    if (data.street !== undefined) await this.clearAndFill(this.loc.customerStreetInput, data.street);
+    if (data.city !== undefined) await this.clearAndFill(this.loc.customerCityInput, data.city);
+    if (data.zip !== undefined) await this.clearAndFill(this.loc.customerZipInput, data.zip);
+    
+    if (data.country !== undefined) {
+      await this.clearAndFill(this.loc.customerCountryInput, data.country);
+      if (data.country === 'US') {
+        await this.waitForVisible(this.loc.customerStateSelect);
+      } else {
+        await this.waitForVisible(this.loc.customerStateInput);
+      }
+    }
+
+    if (data.state !== undefined) {
+      const isDropdown = await this.isVisible(this.loc.customerStateSelect);
+      if (isDropdown) {
+        await this.selectByValue(this.loc.customerStateSelect, data.state);
+      } else {
+        await this.clearAndFill(this.loc.customerStateInput, data.state);
+      }
+    }
+  }
+
+  async submitForm() {
+    await this.waitForEnabled(this.loc.submitCustomerBtn);
+    await this.loc.submitCustomerBtn.click();
+    await this.waitForHidden(this.loc.customerForm);
+    await this.waitForVisible(this.loc.customerList);
+  }
+
+  async cancelForm() {
+    await this.clickWhenReady(this.loc.cancelCustomerBtn);
+    await this.waitForHidden(this.loc.customerForm);
+    await this.waitForVisible(this.loc.customerList);
+  }
+
+  async createCustomer(data) {
+    await this.openCreateForm();
+    await this.fillCustomerForm(data);
+    await this.submitForm();
+  }
+
+  async openEditForm(id) {
+    const editBtn = this.loc.editCustomerBtn(id);
+    await this.waitForVisible(editBtn);
+    await editBtn.click();
+    await this.waitForVisible(this.loc.customerForm);
+  }
+
+  async deleteCustomer(id) {
+    const row = this.loc.customerRowId(id);
+    await this.waitForVisible(row);
+    await this.clickWhenReady(this.loc.deleteCustomerBtn(id));
+    await this.waitForVisible(this.modal.dialog);
+    await this.clickWhenReady(this.modal.confirmBtn);
+    await this.waitForDetached(row);
+  }
+
+  async getRowCount() {
+    return await this.loc.allTableRows.count();
+  }
+
+  async submitFormExpectError() {
+    await this.waitForEnabled(this.loc.submitCustomerBtn);
+    await this.loc.submitCustomerBtn.click();
+    await this.waitForVisible(this.loc.customerFormError);
+  }
+
+  async fillName(v) { await this.clearAndFill(this.loc.customerNameInput, v); }
+  async fillEmail(v) { await this.clearAndFill(this.loc.customerEmailInput, v); }
+  async fillPhone(v) { await this.clearAndFill(this.loc.customerPhoneInput, v); }
+  async fillStreet(v) { await this.clearAndFill(this.loc.customerStreetInput, v); }
+  async fillCity(v) { await this.clearAndFill(this.loc.customerCityInput, v); }
+  async fillZip(v) { await this.clearAndFill(this.loc.customerZipInput, v); }
+  async fillCompany(v) { await this.clearAndFill(this.loc.customerCompanyInput, v); }
+  async selectType(v) { await this.selectByValue(this.loc.customerTypeSelect, v); }
+  async selectAccountStatus(v) { await this.selectByValue(this.loc.customerAccountStatusSelect, v); }
+}
+
+
+=== ApiHelper.js (for beforeAll/afterAll data setup) ===
+/**
+ * ApiHelper.js
+ * ─────────────────────────────────────────────────────────────────────────────
+ * REST API helpers for test setup and teardown.
+ * Uses Playwright's built-in `request` context — no extra HTTP client needed.
+ *
+ * Usage in tests:
+ *   import { ApiHelper } from '../utils/ApiHelper.js';
+ *   const api = new ApiHelper(request);
+ *   const customer = await api.createCustomer({ ... });
+ *   await api.deleteCustomer(customer.id);
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+export class ApiHelper {
+  /** @param {import('@playwright/test').APIRequestContext} request */
+  constructor(request) {
+    this.request = request;
+    this.base    = process.env.API_URL || 'http://localhost:8000/api';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Customers
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async getAllCustomers() {
+    const res = await this.request.get(`${this.base}/customers`);
+    return res.json();
+  }
+
+  async createCustomer(data) {
+    const res = await this.request.post(`${this.base}/customers`, { data });
+    if (!res.ok()) {
+      const body = await res.json();
+      throw new Error(`createCustomer failed: ${JSON.stringify(body)}`);
+    }
+    return res.json();
+  }
+
+  async deleteCustomer(id) {
+    await this.request.delete(`${this.base}/customers/${id}`);
+  }
+
+  /** Delete all customers whose name contains the given pattern. */
+  async cleanupCustomersByName(namePattern) {
+    const customers = await this.getAllCustomers();
+    for (const c of customers) {
+      if (c.name && c.name.includes(namePattern)) {
+        await this.deleteCustomer(c.id).catch(() => {});
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Products
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async getAllProducts() {
+    const res = await this.request.get(`${this.base}/products`);
+    return res.json();
+  }
+
+  async createProduct(data) {
+    const res = await this.request.post(`${this.base}/products`, { data });
+    if (!res.ok()) {
+      const body = await res.json();
+      throw new Error(`createProduct failed: ${JSON.stringify(body)}`);
+    }
+    return res.json();
+  }
+
+  async deleteProduct(id) {
+    await this.request.delete(`${this.base}/products/${id}`);
+  }
+
+  /** Delete all products whose name contains the given pattern. */
+  async cleanupProductsByName(namePattern) {
+    const products = await this.getAllProducts();
+    for (const p of products) {
+      if (p.name && p.name.includes(namePattern)) {
+        await this.deleteProduct(p.id).catch(() => {});
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Orders
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async getAllOrders() {
+    const res = await this.request.get(`${this.base}/orders`);
+    return res.json();
+  }
+
+  async createOrder(data) {
+    const res = await this.request.post(`${this.base}/orders`, { data });
+    if (!res.ok()) {
+      const body = await res.json();
+      throw new Error(`createOrder failed: ${JSON.stringify(body)}`);
+    }
+    return res.json();
+  }
+
+  async deleteOrder(id) {
+    await this.request.delete(`${this.base}/orders/${id}`);
+  }
+
+  async getProductById(id) {
+    const res = await this.request.get(`${this.base}/products/${id}`);
+    return res.json();
+  }
+
+  async getOrderById(id) {
+    const res = await this.request.get(`${this.base}/orders/${id}`);
+    return res.json();
+  }
+
+  async updateOrder(id, data) {
+    const res = await this.request.put(`${this.base}/orders/${id}`, { data });
+    if (!res.ok()) {
+      const body = await res.json();
+      throw new Error(`updateOrder failed: ${JSON.stringify(body)}`);
+    }
+    return res.json();
+  }
+
+  /** Set an order's status to 'Cancelled' via API. */
+  async cancelOrder(id) {
+    return this.updateOrder(id, { status: 'Cancelled' });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Dashboard
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async getDashboard() {
+    const res = await this.request.get(`${this.base}/dashboard`);
+    return res.json();
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Direct API assertion helpers
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * POST an order and return the raw response (for negative testing).
+   * Does NOT throw on non-200 — callers check status themselves.
+   */
+  async postOrderRaw(data) {
+    return this.request.post(`${this.base}/orders`, { data });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Compound setup helpers
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Create a Consumer customer + Basic product + order.
+   * Returns { customer, product, order }.
+   */
+  async setupConsumerOrderWithBasic(suffix) {
+    const s = suffix || Date.now();
+    const customer = await this.createCustomer({
+      name: `Consumer ${s}`, customer_type: 'Consumer',
+      email: `c.${s}@setup.test`, account_status: 'Active', contact_preference: 'Email',
+    });
+    const product = await this.createProduct({
+      name: `Basic Product ${s}`, product_type: 'Basic',
+      price_per_seat: 10.00, stock_quantity: 50,
+    });
+    const order = await this.createOrder({
+      customer_id: customer.id, priority: 'Medium',
+      discount_percentage: 0,
+      products: [{ product_id: product.id, seats: 2 }],
+    });
+    return { customer, product, order };
+  }
+
+  /**
+   * Create an SMB customer + Professional product + order.
+   * Returns { customer, product, order }.
+   */
+  async setupSMBOrderWithProfessional(suffix) {
+    const s = suffix || Date.now();
+    const customer = await this.createCustomer({
+      name: `SMB ${s}`, customer_type: 'SMB',
+      email: `smb.${s}@setup.test`, company_name: `Corp ${s}`,
+      account_status: 'Active', contact_preference: 'Email',
+    });
+    const product = await this.createProduct({
+      name: `Professional Product ${s}`, product_type: 'Professional',
+      price_per_seat: 30.00, stock_quantity: 40,
+    });
+    const order = await this.createOrder({
+      customer_id: customer.id, priority: 'High',
+      discount_percentage: 0,
+      products: [{ product_id: product.id, seats: 1 }],
+    });
+    return { customer, product, order };
+  }
+}
+
+
+=== PATTERN EXAMPLE (tc_man_01.spec.js — follow this exact structure) ===
+/**
+ * tc_man_01.spec.js
+ * ─────────────────────────────────────────────────────────────────────────────
+ * TC-MAN-01: Typing "US" in Country dynamically replaces the disabled state
+ *            input with a populated state <select> dropdown.
+ *
+ * Assertions use:
+ *  • Locator-based waits (no hardcoded ms)
+ *  • customerPage.loc.stateLabel — XPath locator from CustomerLocators
+ *  • XPath in-test assertion for option count
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+import { test, expect } from '@playwright/test';
+import { CustomerPage } from '../pages/CustomerPage.js';
+
+const ALL_US_STATES = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
+  'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
+  'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
+  'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY',
+];
+
+test.describe('TC-MAN-01: US Country Entry Dynamically Renders State Dropdown', () => {
+
+  test('[Positive] State input is disabled before country is set', async ({ page }) => {
+    const customerPage = new CustomerPage(page);
+    await customerPage.navigateToCustomers();
+    await customerPage.openCreateForm();
+
+    // State field starts as a disabled plain input
+    await expect(customerPage.loc.stateInput).toBeDisabled();
+    await expect(customerPage.loc.stateInput).toHaveAttribute('placeholder', 'Only for US addresses');
+
+    // Cancel cleanly
+    await customerPage.cancelForm();
+  });
+
+  test('[Positive] Typing US replaces disabled input with state dropdown', async ({ page }) => {
+    const customerPage = new CustomerPage(page);
+    await customerPage.navigateToCustomers();
+    await customerPage.openCreateForm();
+
+    // Set country to US and blur
+    await customerPage.loc.countryInput.fill('US');
+    await customerPage.loc.countryInput.blur();
+
+    // Disabled input disappears, dropdown appears
+    await expect(customerPage.loc.stateInput).not.toBeVisible();
+    await expect(customerPage.loc.stateSelect).toBeVisible();
+    await expect(customerPage.loc.stateSelect).toBeEnabled();
+
+    await customerPage.cancelForm();
+  });
+
+  test('[Positive] State dropdown contains all 50 US states', async ({ page }) => {
+    const customerPage = new CustomerPage(page);
+    await customerPage.navigateToCustomers();
+    await customerPage.openCreateForm();
+
+    await customerPage.loc.countryInput.fill('US');
+    await customerPage.loc.countryInput.blur();
+    await customerPage.waitForVisible(customerPage.loc.stateSelect);
+
+    // Collect non-placeholder option values
+    const options = await customerPage.loc.stateSelect.locator('option').all();
+    const values = [];
+    for (const opt of options) {
+      const v = await opt.getAttribute('value');
+      if (v) values.push(v);
+    }
+
+    expect(values.length).toBe(50);
+    for (const state of ALL_US_STATES) {
+      expect(values).toContain(state);
+    }
+
+    await customerPage.cancelForm();
+  });
+
+  test('[Positive] Selecting a state from dropdown sets the value', async ({ page }) => {
+    const customerPage = new CustomerPage(page);
+    await customerPage.navigateToCustomers();
+    await customerPage.openCreateForm();
+
+    await customerPage.loc.countryInput.fill('US');
+    await customerPage.loc.countryInput.blur();
+    await customerPage.waitForVisible(customerPage.loc.stateSelect);
+
+    await customerPage.loc.stateSelect.selectOption('CA');
+    await expect(customerPage.loc.stateSelect).toHaveValue('CA');
+
+    // State label (XPath locator from CustomerLocators) should show required marker
+    await expect(customerPage.loc.stateLabel).toContainText('*');
+
+    await customerPage.cancelForm();
+  });
+
+});
+
+
+Requirements:
+1. One test.describe per test case (or group them logically if same entity/scenario)
+2. Name the describe block: "TC-XXX: <test case name>"
+3. Name each test: "[Positive] ..." or "[Negative] ..."
+4. Use beforeAll to create test data via ApiHelper if the test needs existing records
+5. Use afterAll to clean up by name pattern (cleanupCustomersByName, etc.)
+6. Use explicit expect() assertions — not manual wait helpers
+7. For negative tests: submit invalid data, assert error message is visible
+8. Always cancel or clean up the form at the end of each test

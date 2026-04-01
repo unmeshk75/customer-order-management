@@ -1,10 +1,10 @@
-# Customer Order Management
+# E2E Test Generator Orchestrator
 
-A full-stack application for managing customers, products, and orders — built with QA automation as a first-class concern. Every interactive element has stable `data-testid` and `id` attributes, and the project ships an LLM-powered Playwright test generator.
+A powerful, standalone LLM-powered test generation dashboard. It creates Playwright locator classes, page objects, and full test cases for any external React-based project.
 
 ## Quick Start
 
-### 1. Python environment
+### 1. Root Workspace Install
 
 ```bash
 python -m venv venv
@@ -12,102 +12,60 @@ venv\Scripts\activate        # Windows
 # source venv/bin/activate   # Mac / Linux
 
 pip install -r requirements.txt
+npm install
 ```
 
-### 2. Node environment
+### 2. Run the Dashboard
+
+Open two terminals carefully sourced to the `venv`:
 
 ```bash
-npm install    # installs for both frontend/ and automation/ workspaces
-```
-
-### 3. Run the application
-
-Open two terminals:
-
-```bash
-# Terminal 1 — backend
+# Terminal 1 — Dashboard Backend API
 venv\Scripts\activate
-cd backend
-uvicorn main:app --reload --port 8000
+cd dashboard/backend
+uvicorn main:app --reload --port 8001
 
-# Terminal 2 — frontend
-cd frontend
+# Terminal 2 — Dashboard Frontend
+cd dashboard/frontend
 npm run dev
 ```
 
-| Service | URL |
+| Dashboard Client | HTTP URL |
 |---|---|
-| Frontend | http://localhost:5173 |
-| Backend API | http://localhost:8000/api |
-| Swagger UI | http://localhost:8000/docs |
-
-### 4. Run E2E tests
-
-```bash
-npm test                  # headless
-npm run test:headed       # browser visible
-npm run test:ui           # Playwright interactive UI
-```
+| Dashboard UI | http://localhost:5174 |
+| Dashboard API | http://localhost:8001 |
 
 ## What It Does
 
-Manage three resources through a React UI backed by a FastAPI REST API:
+This orchestrator links to your external React codebase via its absolute path. It safely extracts components via `data-testid` values, pipes them seamlessly through Claude/Gemini/Vertex AI models, and dynamically generates valid Node.js E2E configurations in output folders specific to each project.
 
-- **Customers** — name, type (Consumer / SMB / Enterprise), contact details, address
-- **Products** — name, type (Basic / Professional / Teams / Ultra-Enterprise), price per seat, stock
-- **Orders** — link a customer to one or more products with seat counts; discount and status tracking
-
-## Business Rules
-
-**Product availability by customer type:**
-
-| Customer Type | Allowed Products |
-|---|---|
-| Consumer | Basic, Professional |
-| SMB | Professional, Teams |
-| Enterprise | Basic, Teams, Ultra-Enterprise |
-
-**Order constraints:**
-- One order → one customer, one or more products
-- Each product line requires a seat count (minimum 1)
-- Discount is a percentage (0–100) applied to the total
-- Availability is enforced on both frontend and backend (HTTP 400 on violation)
-
-**Data integrity:**
-- Customer email must be unique
-- Products in use cannot be deleted
-- Deleting a customer cascades to all their orders
+Target projects can be completely decoupled. The generator engine supports:
+- **E2E Manifest Extraction**
+- **Locator and Form Entity Page Generation**
+- **Multi-step Test Case CSV Execution**
+- **Direct Playwright Orchestration**
 
 ## Project Structure
 
 ```
 order-management/
-├── backend/                 # FastAPI + SQLAlchemy API
-├── frontend/                # React 18 + Vite UI
-├── automation/              # Playwright E2E tests
-│   └── generator/           # LLM-powered test generator CLI
+├── automation/              # Stores Playwright E2E artifacts for mapped projects
+│   ├── <project_a>/         # Unique structural output bucket
+│   ├── <project_b>/
+│   └── generator/           # Underlying LLM-powered Python engine
+├── dashboard/               
+│   ├── backend/             # Dashboard Orchestrator FastAPI
+│   └── frontend/            # Dashboard React 18 + Vite + Tailwind UI
 ├── package.json             # Root npm workspace config
-└── requirements.txt         # Python dependencies (backend + generator)
+└── requirements.txt         # Root Python dependencies
 ```
 
 ## Sub-folder Guides
 
 | Folder | README |
 |---|---|
-| `backend/` | [API reference, data models, running the server](backend/README.md) |
-| `frontend/` | [Components, test IDs, dev setup](frontend/README.md) |
-| `automation/` | [Running tests, Playwright config](automation/README.md) |
-| `automation/generator/` | [LLM generator CLI, all providers](automation/generator/README.md) |
+| `dashboard/frontend/` | [Frontend setup](dashboard/frontend/README.md) |
+| `dashboard/backend/` | [API backend](dashboard/backend/README.md) |
+| `automation/generator/` | [CLI execution core and prompts](automation/generator/README.md) |
 
 For architecture details, internals, and contributor guidance see [DEVELOPERS_GUIDE.md](DEVELOPERS_GUIDE.md).
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| Backend won't start | Activate venv, run `pip install -r requirements.txt` |
-| Frontend blank or CORS error | Ensure backend is running on port 8000 |
-| Database errors | Delete `backend/app.db` — it recreates on next start |
-| `playwright install chromium` fails (SSL / corporate network) | Set `CHROME_PATH` to your system Chrome; the config falls back automatically |
-| Playwright can't find elements after UI changes | Re-run `python automation/generator/main.py e2e --only locators` |
-| `ImportError: cannot import name 'ToolAnnotations'` | `pip uninstall mcp -y && pip install "mcp>=1.0.0"` |

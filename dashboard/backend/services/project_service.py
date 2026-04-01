@@ -13,13 +13,16 @@ except ImportError:
     extractor = None
 
 def link_folder(db: Session, data: ProjectCreateFolder):
+    import re
     src_dir = os.path.join(data.path, data.src_subdir) if data.src_subdir else data.path
     if not os.path.isdir(data.path):
         raise ValueError(f"Invalid project path: {data.path}")
     if data.src_subdir and not os.path.isdir(src_dir):
         raise ValueError(f"Invalid src path: {src_dir}")
     
-    out_dir = data.output_dir or os.path.join(data.path, "e2e-generated")
+    project_slug = re.sub(r'[^a-zA-Z0-9_\-]', '_', data.name).lower()
+    auto_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "automation"))
+    out_dir = data.output_dir or os.path.join(auto_dir, project_slug)
     
     db_proj = Project(
         name=data.name,
@@ -81,9 +84,11 @@ def handle_zip_upload(db: Session, file_path: str, original_name: str, name: str
         for possible in ['src', 'frontend/src', 'app']:
             if os.path.isdir(os.path.join(extract_path, possible)):
                 detected_src = possible
-                break
-                
-    out_dir = os.path.join(extract_path, "e2e-generated")
+    import re
+    project_slug = re.sub(r'[^a-zA-Z0-9_\-]', '_', name).lower()
+    auto_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "automation"))
+    out_dir = os.path.join(auto_dir, project_slug)
+
     db_proj = Project(
         name=name,
         source_type="zip",

@@ -6,6 +6,8 @@ from database import SessionLocal
 from models import TestRun, TestCaseResult, Project
 from services.generator_service import _inject_config
 
+ACTIVE_TEST_RUNS = {}
+
 def _append_run_log(db: Session, run_id: int, line: str):
     # Simplistic log append, in prod batch this
     db.execute(update(TestRun).where(TestRun.id == run_id)
@@ -26,20 +28,27 @@ async def execute_playwright_run(run_id: int):
         nm_path = os.path.join(project.output_dir, "node_modules")
         if not os.path.exists(nm_path):
             _append_run_log(db, run_id, "Installing dependencies for Playwright...\n")
-            proc_npm = subprocess.Popen(['npm', 'install'], cwd=project.output_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            proc_npm = subprocess.Popen(
+                ['npm', 'install'], cwd=project.output_dir, 
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                text=True, shell=(os.name == 'nt')
+            )
             for line in proc_npm.stdout:
                 _append_run_log(db, run_id, line.strip())
             proc_npm.wait()
 
         cmd = ['npx', 'playwright', 'test',
-               '--reporter=list',
-               '--reporter=json:test-results/pw-results.json',
+               '--reporter=list,json,html',
                '--config=playwright.config.cjs']
+
         
         if run.spec_filter:
             cmd.append(run.spec_filter)
             
         env = os.environ.copy()
+        env['PLAYWRIGHT_JSON_OUTPUT_NAME'] = 'test-results/pw-results.json'
+        env['PLAYWRIGHT_HTML_REPORT'] = 'playwright-report'
+        env['PLAYWRIGHT_HTML_OPEN'] = 'never'
         if run.base_url:
             env['FRONTEND_URL'] = run.base_url
             
@@ -47,8 +56,10 @@ async def execute_playwright_run(run_id: int):
 
         process = subprocess.Popen(cmd, cwd=project.output_dir,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, encoding='utf-8', env=env)
+            text=True, encoding='utf-8', env=env, shell=(os.name == 'nt'))
             
+        ACTIVE_TEST_RUNS[run_id] = process
+
         # Synchronous read logic for simple stub, blocks async loop
         # in prod use asyncio.create_subprocess_exec
         for line in process.stdout:
@@ -91,4 +102,5 @@ async def execute_playwright_run(run_id: int):
             _append_run_log(db, run_id, f"ERROR: {str(e)}\n")
             db.commit()
     finally:
+        ACTIVE_TEST_RUNS.pop(run_id, None)
         db.close()

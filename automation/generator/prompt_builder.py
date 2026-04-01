@@ -77,8 +77,9 @@ Do not overthink. Output the file directly without any reasoning or analysis pre
 RULES:
   • Export one class named {entity_name}Locators
   • Constructor accepts `page` (Playwright Page object)
-  • All simple selectors use getter properties (get xxx() {{ return ...; }})
-  • Dynamic selectors (requiring an id parameter) use regular methods: fooBar(id) {{ return ...; }}
+  • All simple static selectors MUST use getter properties WITHOUT parameters (get xxx() {{ return ...; }})
+  • ❌ NEVER add parameters or arguments to a `get` property! `get foo(bar) {{}}` IS A FATAL JAVASCRIPT SYNTAX ERROR.
+  • Dynamic selectors (requiring an id or label parameter text inputs) MUST be standard methods: fooBar(id) {{ return ...; }}
   • Every getter/method returns a Playwright Locator
   • No logic, no await, no waits inside this file — pure locator definitions
 
@@ -179,7 +180,7 @@ OUTPUT: Return ONLY the raw JavaScript file content. No markdown, no explanation
 {modal_locators}
 
 Requirements:
-1. navigateTo{entity_name}s() — goto(), wait for nav btn, click, wait for list container
+1. navigateTo{entity_name}s() — goto(), wait for EXACT locator from NavigationLocators (e.g. this.navLoc.nav{entity_name}s), click, wait for list
 2. openCreateForm() — wait for btn enabled, click, wait for form visible
 3. fill{entity_name}Form(data) — fill each field only if data.field !== undefined
 4. submitForm() — wait enabled, click, wait for form hidden, wait for list visible

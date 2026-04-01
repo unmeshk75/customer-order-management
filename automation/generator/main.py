@@ -49,13 +49,80 @@ from llm_client import create_client, LLMClient, SDKClient, GeminiClient, Vertex
 _HERE   = os.path.dirname(os.path.abspath(__file__))
 _E2E_REF = os.path.normpath(os.path.join(_HERE, 'e2e-sample'))
 
-# Static files to copy verbatim from reference e2e/
-STATIC_COPIES = [
-    'pages/BasePage.js',
-    'utils/ApiHelper.js',
-    'playwright.config.cjs',  # lives in automation/ not e2e/, handled separately
-    'package.json',           # lives in automation/ not e2e/, handled separately
-]
+# Static files are now generated natively via inline templates instead of copies
+_BASE_PAGE_JS = """\
+export class BasePage {
+  /**
+   * @param {import('@playwright/test').Page} page
+   */
+  constructor(page) {
+    this.page = page;
+    this.page.on('dialog', dialog => this.dialogHandler && this.dialogHandler(dialog));
+  }
+
+  async goto(path = '') {
+    await this.page.goto(path);
+  }
+
+  // Waits
+  async waitForVisible(loc) { if (!loc) throw new Error("waitForVisible: Locator is undefined!"); await loc.waitFor({ state: 'visible' }); }
+  async waitForHidden(loc) { if (!loc) throw new Error("waitForHidden: Locator is undefined!"); await loc.waitFor({ state: 'hidden' }); }
+  async waitForAttached(loc) { if (!loc) throw new Error("waitForAttached: Locator is undefined!"); await loc.waitFor({ state: 'attached' }); }
+  async waitForDetached(loc) { if (!loc) throw new Error("waitForDetached: Locator is undefined!"); await loc.waitFor({ state: 'detached' }); }
+  async waitForEnabled(loc) { if (!loc) throw new Error("waitForEnabled: Locator is undefined!"); await loc.waitFor({ state: 'visible' }); }
+  async waitForCount(loc, n) { if (!loc) throw new Error("waitForCount: Locator is undefined!"); await this.page.waitForFunction(([l, x]) => document.querySelectorAll(l).length === x, [loc._selector, n]); }
+  async waitForText(loc, text) { if (!loc) throw new Error("waitForText: Locator is undefined!"); await loc.filter({ hasText: text }).waitFor(); }
+  async waitForTextContaining(loc, sub) { if (!loc) throw new Error("waitForTextContaining: Locator is undefined!"); await loc.filter({ hasText: sub }).waitFor(); }
+
+  // Booleans
+  async isVisible(loc) { if (!loc) throw new Error("isVisible: Locator is undefined!"); return await loc.isVisible(); }
+  async isEnabled(loc) { if (!loc) throw new Error("isEnabled: Locator is undefined!"); return await loc.isEnabled(); }
+  async isDisabled(loc) { if (!loc) throw new Error("isDisabled: Locator is undefined!"); return await loc.isDisabled(); }
+
+  // DOM
+  async getText(loc) { if (!loc) throw new Error("getText: Locator is undefined!"); return await loc.innerText(); }
+  async clearAndFill(loc, value) { if (!loc) throw new Error("clearAndFill: Locator is undefined!"); await loc.fill(''); await loc.fill(value); }
+  async selectByText(loc, text) { if (!loc) throw new Error("selectByText: Locator is undefined!"); await loc.selectOption({ label: text }); }
+  async selectByValue(loc, value) { if (!loc) throw new Error("selectByValue: Locator is undefined!"); await loc.selectOption({ value: value }); }
+  async clickWhenReady(loc) { if (!loc) throw new Error("clickWhenReady: Locator is undefined!"); await loc.waitFor({ state: 'visible' }); await loc.click(); }
+  async scrollTo(loc) { if (!loc) throw new Error("scrollTo: Locator is undefined!"); await loc.scrollIntoViewIfNeeded(); }
+
+  // Numbers
+  async getNumericText(loc) { const t = await this.getText(loc); return parseFloat(t.replace(/[^0-9.-]+/g, '')); }
+  async getIntText(loc) { const t = await this.getText(loc); return parseInt(t.replace(/[^0-9-]+/g, ''), 10); }
+
+  // Dialogs
+  async acceptDialog() { this.dialogHandler = async d => await d.accept(); }
+  async dismissDialog() { this.dialogHandler = async d => await d.dismiss(); }
+}
+"""
+
+_API_HELPER_JS = """\
+export class ApiHelper {
+  /**
+   * @param {import('@playwright/test').APIRequestContext} request
+   */
+  constructor(request) {
+    this.request = request;
+    this.baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  }
+
+  async get(endpoint) {
+    const res = await this.request.get(`${this.baseUrl}${endpoint}`);
+    return await res.json().catch(() => ({}));
+  }
+
+  async post(endpoint, data) {
+    const res = await this.request.post(`${this.baseUrl}${endpoint}`, { data });
+    return await res.json().catch(() => ({}));
+  }
+
+  async delete(endpoint) {
+    const res = await this.request.delete(`${this.baseUrl}${endpoint}`);
+    return await res.json().catch(() => ({}));
+  }
+}
+"""
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -184,15 +251,33 @@ module.exports = defineConfig({
 
 
 def _write_static_files(output_dir: str) -> None:
-    """Copy BasePage.js and ApiHelper.js from reference; write scoped Playwright config."""
-    # BasePage.js and ApiHelper.js — copy verbatim from reference e2e/
-    writer.copy_reference_file('pages/BasePage.js', output_dir)
-    writer.copy_reference_file('utils/ApiHelper.js', output_dir)
-    # Scoped playwright config — allows running single specs from e2e-generated/tests/
+    """Write generic BasePage.js and scoped Playwright config natively."""
+    import os
+    
+    # BasePage.js
+    pages_dir = os.path.join(output_dir, 'pages')
+    os.makedirs(pages_dir, exist_ok=True)
+    base_page_path = os.path.join(pages_dir, 'BasePage.js')
+    if not os.path.exists(base_page_path):
+        with open(base_page_path, 'w', encoding='utf-8', newline='\n') as f:
+            f.write(_BASE_PAGE_JS)
+        print(f'  [write] {base_page_path}')
+
+    # ApiHelper.js
+    utils_dir = os.path.join(output_dir, 'utils')
+    os.makedirs(utils_dir, exist_ok=True)
+    api_helper_path = os.path.join(utils_dir, 'ApiHelper.js')
+    if not os.path.exists(api_helper_path):
+        with open(api_helper_path, 'w', encoding='utf-8', newline='\n') as f:
+            f.write(_API_HELPER_JS)
+        print(f'  [write] {api_helper_path}')
+
+    # Scoped playwright config
     config_path = os.path.join(output_dir, 'playwright.config.cjs')
-    with open(config_path, 'w', encoding='utf-8', newline='\n') as f:
-        f.write(_SCOPED_PLAYWRIGHT_CONFIG)
-    print(f'  [write] {config_path}')
+    if not os.path.exists(config_path):
+        with open(config_path, 'w', encoding='utf-8', newline='\n') as f:
+            f.write(_SCOPED_PLAYWRIGHT_CONFIG)
+        print(f'  [write] {config_path}')
 
 
 def _write_barrel(output_dir: str, entities: list[str]) -> None:
@@ -262,9 +347,9 @@ def cmd_e2e(args) -> None:
         print('\n[e2e] step 3 — generating page object files...')
         _generate_pages(client, locator_map, output_dir, manifest, page_entities)
 
+    print('\n[e2e] step 4 — writing static / copied files...')
+    _write_static_files(output_dir)
     if only is None:
-        print('\n[e2e] step 4 — writing static / copied files...')
-        _write_static_files(output_dir)
         _write_barrel(output_dir, entities)
 
     print(f'\n[e2e] ✓ done — output: {output_dir}')

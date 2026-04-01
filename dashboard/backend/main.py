@@ -19,10 +19,15 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup_event():
+    import os
+    from dotenv import load_dotenv
+    # Look for generator's .env file
+    load_dotenv(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "automation", "generator", ".env")))
+    
     db = SessionLocal()
     defaults = {
-        "ANTHROPIC_API_KEY": ("", 1),
-        "GEMINI_API_KEY": ("", 1),
+        "ANTHROPIC_API_KEY": (os.getenv("ANTHROPIC_API_KEY", ""), 1),
+        "GEMINI_API_KEY": (os.getenv("GEMINI_API_KEY", ""), 1),
         "GCP_PROJECT": ("", 0),
         "GCP_CREDENTIALS_PATH": ("", 0),
         "GCP_LOCATION": ("us-central1", 0),
@@ -32,8 +37,12 @@ def startup_event():
         "CHROME_PATH": ("", 0),
     }
     for k, (v, secret) in defaults.items():
-        if not db.query(Config).filter(Config.key == k).first():
+        existing = db.query(Config).filter(Config.key == k).first()
+        if not existing:
             db.add(Config(key=k, value=v, is_secret=secret, description=f"Default {k} config"))
+        elif not existing.value and v:
+            # If the DB is empty but the .env has a value, sync it!
+            existing.value = v
     db.commit()
     db.close()
 

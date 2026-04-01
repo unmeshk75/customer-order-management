@@ -1,0 +1,1262 @@
+{
+  "customer-name-input": {
+    "file": "CustomerForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-type-select": {
+    "file": "CustomerForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "company-name-group": {
+    "file": "CustomerForm.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "company",
+    "type": "testid"
+  },
+  "customer-company-input": {
+    "file": "CustomerForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-email-input": {
+    "file": "CustomerForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-phone-input": {
+    "file": "CustomerForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-account-status-select": {
+    "file": "CustomerForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-contact-preference-select": {
+    "file": "CustomerForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-street-input": {
+    "file": "CustomerForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-city-input": {
+    "file": "CustomerForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-zip-input": {
+    "file": "CustomerForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-country-input": {
+    "file": "CustomerForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-state-select": {
+    "file": "CustomerForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-state-input": {
+    "file": "CustomerForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "submit-customer-btn": {
+    "file": "CustomerForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "cancel-customer-btn": {
+    "file": "CustomerForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "id:customer-form-error": {
+    "file": "CustomerForm.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-form-error"
+  },
+  "id:customer-form": {
+    "file": "CustomerForm.jsx",
+    "element": "form",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-form"
+  },
+  "id:customer-name": {
+    "file": "CustomerForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-name"
+  },
+  "id:customer-type": {
+    "file": "CustomerForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-type"
+  },
+  "id:customer-company": {
+    "file": "CustomerForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-company"
+  },
+  "id:customer-email": {
+    "file": "CustomerForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-email"
+  },
+  "id:customer-phone": {
+    "file": "CustomerForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-phone"
+  },
+  "id:customer-account-status": {
+    "file": "CustomerForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-account-status"
+  },
+  "id:customer-contact-preference": {
+    "file": "CustomerForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-contact-preference"
+  },
+  "id:customer-street": {
+    "file": "CustomerForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-street"
+  },
+  "id:customer-city": {
+    "file": "CustomerForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-city"
+  },
+  "id:customer-zip": {
+    "file": "CustomerForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-zip"
+  },
+  "id:customer-country": {
+    "file": "CustomerForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-country"
+  },
+  "id:customer-state": {
+    "file": "CustomerForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-state"
+  },
+  "id:submit-customer-btn": {
+    "file": "CustomerForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "submit-customer-btn"
+  },
+  "id:cancel-customer-btn": {
+    "file": "CustomerForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "cancel-customer-btn"
+  },
+  "customer-list": {
+    "file": "CustomerList.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "create-customer-btn": {
+    "file": "CustomerList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-filter-bar": {
+    "file": "CustomerList.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-search-input": {
+    "file": "CustomerList.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "expand-row-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "customer-id-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-name-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-company-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-type-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-email-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-phone-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-location-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-status-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-contact-pref-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "edit-customer-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "delete-customer-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "detail-row-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "tr",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "detail-table-${customer.id}": {
+    "file": "CustomerList.jsx",
+    "element": "table",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "id:customer-list-error": {
+    "file": "CustomerList.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-list-error"
+  },
+  "id:create-customer-btn": {
+    "file": "CustomerList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "create-customer-btn"
+  },
+  "id:customer-search": {
+    "file": "CustomerList.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customer-search"
+  },
+  "id:customers-table": {
+    "file": "CustomerList.jsx",
+    "element": "table",
+    "condition": "always",
+    "entity": "customer",
+    "type": "id",
+    "id": "customers-table"
+  },
+  "dashboard": {
+    "file": "Dashboard.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "dashboard",
+    "type": "testid"
+  },
+  "dashboard-card-customers": {
+    "file": "Dashboard.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "dashboard",
+    "type": "testid"
+  },
+  "customer-total": {
+    "file": "Dashboard.jsx",
+    "element": "span",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-type-row": {
+    "file": "Dashboard.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "customer-count-${type.toLowerCase()}": {
+    "file": "Dashboard.jsx",
+    "element": "span",
+    "condition": "always",
+    "entity": "customer",
+    "type": "testid"
+  },
+  "dashboard-card-orders": {
+    "file": "Dashboard.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "dashboard",
+    "type": "testid"
+  },
+  "order-total": {
+    "file": "Dashboard.jsx",
+    "element": "span",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-status-row": {
+    "file": "Dashboard.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-count-${orderStatus.toLowerCase()}": {
+    "file": "Dashboard.jsx",
+    "element": "span",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "dashboard-card-revenue": {
+    "file": "Dashboard.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "dashboard",
+    "type": "testid"
+  },
+  "total-revenue": {
+    "file": "Dashboard.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "dashboard-card-lowstock": {
+    "file": "Dashboard.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "dashboard",
+    "type": "testid"
+  },
+  "low-stock-count": {
+    "file": "Dashboard.jsx",
+    "element": "span",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "low-stock-row": {
+    "file": "Dashboard.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "low-stock-name-${p.id}": {
+    "file": "Dashboard.jsx",
+    "element": "span",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "low-stock-qty-${p.id}": {
+    "file": "Dashboard.jsx",
+    "element": "span",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "modal-overlay": {
+    "file": "Modal.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "modal",
+    "type": "testid"
+  },
+  "modal-dialog": {
+    "file": "Modal.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "modal",
+    "type": "testid"
+  },
+  "modal-title": {
+    "file": "Modal.jsx",
+    "element": "h3",
+    "condition": "always",
+    "entity": "modal",
+    "type": "testid"
+  },
+  "modal-message": {
+    "file": "Modal.jsx",
+    "element": "p",
+    "condition": "always",
+    "entity": "modal",
+    "type": "testid"
+  },
+  "modal-confirm": {
+    "file": "Modal.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "modal",
+    "type": "testid"
+  },
+  "modal-cancel": {
+    "file": "Modal.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "modal",
+    "type": "testid"
+  },
+  "nav-dashboard": {
+    "file": "Navigation.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "navigation",
+    "type": "testid"
+  },
+  "nav-customers": {
+    "file": "Navigation.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "navigation",
+    "type": "testid"
+  },
+  "nav-products": {
+    "file": "Navigation.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "navigation",
+    "type": "testid"
+  },
+  "nav-orders": {
+    "file": "Navigation.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "navigation",
+    "type": "testid"
+  },
+  "id:nav-dashboard": {
+    "file": "Navigation.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "navigation",
+    "type": "id",
+    "id": "nav-dashboard"
+  },
+  "id:nav-customers": {
+    "file": "Navigation.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "navigation",
+    "type": "id",
+    "id": "nav-customers"
+  },
+  "id:nav-products": {
+    "file": "Navigation.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "navigation",
+    "type": "id",
+    "id": "nav-products"
+  },
+  "id:nav-orders": {
+    "file": "Navigation.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "navigation",
+    "type": "id",
+    "id": "nav-orders"
+  },
+  "order-wizard": {
+    "file": "OrderForm.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-customer-readonly": {
+    "file": "OrderForm.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-customer-select": {
+    "file": "OrderForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-status-select": {
+    "file": "OrderForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-priority-select": {
+    "file": "OrderForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-discount-input": {
+    "file": "OrderForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-notes-input": {
+    "file": "OrderForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "product-row-${index}": {
+    "file": "OrderForm.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "order-product-${index}": {
+    "file": "OrderForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-seats-${index}": {
+    "file": "OrderForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "stock-indicator-${index}": {
+    "file": "OrderForm.jsx",
+    "element": "span",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "remove-product-${index}": {
+    "file": "OrderForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "add-product-btn": {
+    "file": "OrderForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "order-total-summary": {
+    "file": "OrderForm.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-subtotal": {
+    "file": "OrderForm.jsx",
+    "element": "span",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-discount-amount": {
+    "file": "OrderForm.jsx",
+    "element": "span",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-products-readonly": {
+    "file": "OrderForm.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "review-table": {
+    "file": "OrderForm.jsx",
+    "element": "table",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "review-subtotal-${idx}": {
+    "file": "OrderForm.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "wizard-back": {
+    "file": "OrderForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "wizard-next": {
+    "file": "OrderForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "wizard-submit": {
+    "file": "OrderForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "cancel-order-btn": {
+    "file": "OrderForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "id:order-form-error": {
+    "file": "OrderForm.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "order-form-error"
+  },
+  "id:order-customer": {
+    "file": "OrderForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "order-customer"
+  },
+  "id:order-status": {
+    "file": "OrderForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "order-status"
+  },
+  "id:order-priority": {
+    "file": "OrderForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "order-priority"
+  },
+  "id:order-discount": {
+    "file": "OrderForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "order-discount"
+  },
+  "id:order-notes": {
+    "file": "OrderForm.jsx",
+    "element": "textarea",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "order-notes"
+  },
+  "id:order-products-section": {
+    "file": "OrderForm.jsx",
+    "element": "fieldset",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "order-products-section"
+  },
+  "id:submit-order-btn": {
+    "file": "OrderForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "submit-order-btn"
+  },
+  "id:cancel-order-btn": {
+    "file": "OrderForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "cancel-order-btn"
+  },
+  "order-list": {
+    "file": "OrderList.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "filter-sidebar": {
+    "file": "OrderList.jsx",
+    "element": "aside",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "sidebar-close": {
+    "file": "OrderList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "navigation",
+    "type": "testid"
+  },
+  "create-order-btn": {
+    "file": "OrderList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "open-filters-btn": {
+    "file": "OrderList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "filter-chips": {
+    "file": "OrderList.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "remove-chip-${group}-${value}": {
+    "file": "OrderList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "expand-row-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "order-id-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-customer-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-customer-type-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-date-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-status-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-priority-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-total-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-discount-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "order-discounted-total-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "edit-order-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "delete-order-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "order",
+    "type": "testid"
+  },
+  "detail-row-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "tr",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "detail-table-${order.id}": {
+    "file": "OrderList.jsx",
+    "element": "table",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "detail-subtotal-${p.product_id}": {
+    "file": "OrderList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "general",
+    "type": "testid"
+  },
+  "id:order-list-error": {
+    "file": "OrderList.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "order-list-error"
+  },
+  "id:create-order-btn": {
+    "file": "OrderList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "create-order-btn"
+  },
+  "id:orders-table": {
+    "file": "OrderList.jsx",
+    "element": "table",
+    "condition": "always",
+    "entity": "order",
+    "type": "id",
+    "id": "orders-table"
+  },
+  "product-name-input": {
+    "file": "ProductForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-type-select": {
+    "file": "ProductForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-description-input": {
+    "file": "ProductForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-price-input": {
+    "file": "ProductForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-stock-input": {
+    "file": "ProductForm.jsx",
+    "element": "element",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "submit-product-btn": {
+    "file": "ProductForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "cancel-product-btn": {
+    "file": "ProductForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "id:product-form-error": {
+    "file": "ProductForm.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "product-form-error"
+  },
+  "id:product-form": {
+    "file": "ProductForm.jsx",
+    "element": "form",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "product-form"
+  },
+  "id:product-name": {
+    "file": "ProductForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "product-name"
+  },
+  "id:product-type": {
+    "file": "ProductForm.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "product-type"
+  },
+  "id:product-description": {
+    "file": "ProductForm.jsx",
+    "element": "textarea",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "product-description"
+  },
+  "id:product-price": {
+    "file": "ProductForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "product-price"
+  },
+  "id:product-stock": {
+    "file": "ProductForm.jsx",
+    "element": "input",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "product-stock"
+  },
+  "id:submit-product-btn": {
+    "file": "ProductForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "submit-product-btn"
+  },
+  "id:cancel-product-btn": {
+    "file": "ProductForm.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "cancel-product-btn"
+  },
+  "product-list": {
+    "file": "ProductList.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "create-product-btn": {
+    "file": "ProductList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-filter-bar": {
+    "file": "ProductList.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-type-filter": {
+    "file": "ProductList.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-id-${product.id}": {
+    "file": "ProductList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-name-${product.id}": {
+    "file": "ProductList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-type-${product.id}": {
+    "file": "ProductList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-price-${product.id}": {
+    "file": "ProductList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-stock-${product.id}": {
+    "file": "ProductList.jsx",
+    "element": "span",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "product-description-${product.id}": {
+    "file": "ProductList.jsx",
+    "element": "td",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "edit-product-${product.id}": {
+    "file": "ProductList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "delete-product-${product.id}": {
+    "file": "ProductList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "product",
+    "type": "testid"
+  },
+  "id:product-list-error": {
+    "file": "ProductList.jsx",
+    "element": "div",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "product-list-error"
+  },
+  "id:create-product-btn": {
+    "file": "ProductList.jsx",
+    "element": "button",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "create-product-btn"
+  },
+  "id:product-type-filter": {
+    "file": "ProductList.jsx",
+    "element": "select",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "product-type-filter"
+  },
+  "id:products-table": {
+    "file": "ProductList.jsx",
+    "element": "table",
+    "condition": "always",
+    "entity": "product",
+    "type": "id",
+    "id": "products-table"
+  }
+}
