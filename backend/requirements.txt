@@ -1,0 +1,16 @@
+# Dependencies are managed at root level: ../requirements.txt
+# Use the root venv: ../venv/Scripts/activate
+# Run: pip install -r ../requirements.txt
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+sqlalchemy==2.0.25
+pydantic==2.5.3
+python-dotenv==1.0.0
+pytest==7.4.4
+httpx>=0.27.1
+email-validator
+anthropic>=0.40.0
+openpyxl>=3.1.0
+playwright>=1.40.0
+claude-agent-sdk
+mcp
